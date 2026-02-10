@@ -1,0 +1,121 @@
+'use client';
+
+import Link from 'next/link';
+import StatusBadge from './StatusBadge';
+import { Service } from '@/types';
+
+// Mock data - will be replaced with API call
+const mockServices: Service[] = [
+    {
+        id: '1',
+        tarih: '2026-01-14',
+        saat: '09:30',
+        tekneAdi: 'S/Y BELLA BLUE',
+        adres: 'NETSEL',
+        yer: 'L Pontonu',
+        servisAciklamasi: 'YANMAR 4JH80 Motor Rutin Bakım',
+        irtibatKisi: 'Ahmet Kaptan',
+        telefon: '+905321234567',
+        isTuru: 'PAKET',
+        durum: 'DEVAM_EDIYOR',
+        atananPersonel: [{ personnelId: '1', personnelAd: 'Mehmet Güven', rol: 'sorumlu' }],
+    },
+    {
+        id: '2',
+        tarih: '2026-01-14',
+        saat: '11:00',
+        tekneAdi: 'M/V ARIEL',
+        adres: 'YATMARİN',
+        yer: 'Adaköy',
+        servisAciklamasi: 'Seakeeper Arıza Kontrol',
+        irtibatKisi: 'Nermin Hanım',
+        telefon: '+905357276156',
+        isTuru: 'ARIZA',
+        durum: 'PARCA_BEKLIYOR',
+        atananPersonel: [
+            { personnelId: '2', personnelAd: 'İbrahim Yayalık', rol: 'sorumlu' },
+            { personnelId: '3', personnelAd: 'Alican Yaylalı', rol: 'destek' },
+        ],
+    },
+    {
+        id: '3',
+        tarih: '2026-01-14',
+        saat: '14:00',
+        tekneAdi: 'CAT. HELIOS',
+        adres: 'BOZBURUN',
+        yer: 'DSV Marina',
+        servisAciklamasi: 'Pasarella Montajı + Genel Kontrol',
+        isTuru: 'PROJE',
+        durum: 'RAPOR_BEKLIYOR',
+        atananPersonel: [{ personnelId: '4', personnelAd: 'Sercan Sarız', rol: 'sorumlu' }],
+    },
+];
+
+export default function RecentServices() {
+    return (
+        <div className="card">
+            <div className="card-header">
+                <h3 className="card-title">Bugünkü Servisler</h3>
+                <Link href="/planlama" className="btn btn-secondary" style={{ fontSize: '0.8rem' }}>
+                    Tümünü Gör →
+                </Link>
+            </div>
+
+            <div className="table-container" style={{ boxShadow: 'none' }}>
+                <table className="table">
+                    <thead>
+                        <tr>
+                            <th>Saat</th>
+                            <th>Tekne</th>
+                            <th>İş</th>
+                            <th>Durum</th>
+                            <th>Personel</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {mockServices.map(service => (
+                            <tr key={service.id}>
+                                <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
+                                    {service.saat || '—'}
+                                </td>
+                                <td>
+                                    <div style={{ fontWeight: 500 }}>{service.tekneAdi}</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                        {service.adres} - {service.yer}
+                                    </div>
+                                </td>
+                                <td style={{ maxWidth: '250px' }}>
+                                    <div style={{
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {service.servisAciklamasi}
+                                    </div>
+                                </td>
+                                <td>
+                                    <StatusBadge durum={service.durum} />
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        {service.atananPersonel.map((p, i) => (
+                                            <span
+                                                key={i}
+                                                style={{
+                                                    fontSize: '0.85rem',
+                                                    color: p.rol === 'sorumlu' ? 'var(--color-text)' : 'var(--color-text-muted)',
+                                                }}
+                                            >
+                                                {p.rol === 'sorumlu' ? '👤' : '👥'} {p.personnelAd}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}

@@ -1,0 +1,34 @@
+[
+    {
+        "id": "U1",
+        "ad": "Furkan ÇAKIR",
+        "email": "furkan@servicepro.com",
+        "password": "admin123",
+        "rol": "admin",
+        "aktif": true
+    },
+    {
+        "id": "U2",
+        "ad": "Mehmet KARA",
+        "email": "mehmet@servicepro.com",
+        "password": "yetkili123",
+        "rol": "yetkili",
+        "aktif": true
+    },
+    {
+        "id": "U3",
+        "ad": "Burak ÇETİNEL",
+        "email": "burak@servicepro.com",
+        "password": "yetkili123",
+        "rol": "yetkili",
+        "aktif": true
+    },
+    {
+        "id": "U4",
+        "ad": "Tuğrul SEMİZ",
+        "email": "tugrul@servicepro.com",
+        "password": "yetkili123",
+        "rol": "yetkili",
+        "aktif": true
+    }
+]

@@ -1,0 +1,19 @@
+[
+  { "id": "1", "ad": "Ali Can Yaylalı", "rol": "teknisyen", "unvan": "ustabasi", "aktif": true, "girisYili": 2019 },
+  { "id": "2", "ad": "Batuhan Batmaz", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2022 },
+  { "id": "3", "ad": "Berkay Yalçınkaya", "rol": "teknisyen", "unvan": "cirak", "aktif": true, "girisYili": 2024 },
+  { "id": "4", "ad": "Cüneyt Yaylalı", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2018 },
+  { "id": "5", "ad": "Emre Kaya", "rol": "teknisyen", "unvan": "ustabasi", "aktif": true, "girisYili": 2020 },
+  { "id": "6", "ad": "Erhan Turhan", "rol": "teknisyen", "unvan": "ustabasi", "aktif": true, "girisYili": 2017 },
+  { "id": "7", "ad": "Halil İbrahim Duru", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2023 },
+  { "id": "8", "ad": "İbrahim Yayalık", "rol": "teknisyen", "unvan": "ustabasi", "aktif": true, "girisYili": 2016 },
+  { "id": "9", "ad": "İbrahim Yaylalı", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2021 },
+  { "id": "10", "ad": "Mehmet Bacak", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2020 },
+  { "id": "11", "ad": "Mehmet Güven", "rol": "teknisyen", "unvan": "ustabasi", "aktif": true, "girisYili": 2015 },
+  { "id": "12", "ad": "Mekselina Kebabcı", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2023 },
+  { "id": "13", "ad": "Melih Çoban", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2024 },
+  { "id": "14", "ad": "Muhammed Bacak", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2022 },
+  { "id": "15", "ad": "Ömer Bıdan", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2023 },
+  { "id": "16", "ad": "Sercan Sarıöz", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2019 },
+  { "id": "17", "ad": "Volkan Özkan", "rol": "teknisyen", "unvan": "teknisyen", "aktif": true, "girisYili": 2023 }
+]

@@ -1,0 +1,554 @@
+// ServicePro ERP - Prisma Schema
+// Marlin Yatçılık Tekne Servis Yönetim Sistemi
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== KULLANICI & AUTHENTICATION ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  ad            String
+  role          UserRole  @default(YETKILI)
+  aktif         Boolean   @default(true)
+  emailVerified DateTime? @map("email_verified")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // YENİ: 4 yetkili whitelist kontrolü - Sadece belirlenen kişiler admin yetkisine sahip olabilir
+  whitelistedYetkili   Boolean?  @default(false) @map("whitelisted_yetkili")
+
+  // Relations
+  auditLogs          AuditLog[]
+  yetkiliDegerlendirmeleriUsta   YetkiliDegerlendirmeUsta[] @relation("YetkiliDegerlendirmeUsta_Yetkili")
+  yetkiliDegerlendirmeleriCirak  YetkiliDegerlendirmeCirak[] @relation("YetkiliDegerlendirmeCirak_Yetkili")
+  ofisindenServisler  Service[] @relation("User_OfisServisler")
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  YETKILI
+}
+
+// ==================== PERSONEL ====================
+
+model Personel {
+  id            String         @id @default(cuid())
+  ad            String
+  unvan         PersonelUnvan  @default(CIRAK)
+  rol           String         @default("teknisyen") // teknisyen, yetkili
+  aktif         Boolean        @default(true)
+  girisYili     Int?           @map("giris_yili")
+  telefon       String?
+  email         String?
+  adres         String?
+  aciklama      String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
+
+  // Relations
+  servisAtamalari     ServicePersonel[]
+  servisPuanlari       ServisPuan[]
+  yetkiliDegerlendirmeleriUsta   YetkiliDegerlendirmeUsta[]
+  yetkiliDegerlendirmeleriCirak  YetkiliDegerlendirmeCirak[]
+  ismailDegerlendirmeleri        IsmailDegerlendirme[]
+  aylikPerformanslar    AylikPerformans[]
+
+  @@index([aktif])
+  @@index([unvan])
+  @@map("personel")
+}
+
+enum PersonelUnvan {
+  USTA
+  CIRAK
+  YONETICI
+  OFIS
+}
+
+// ==================== TEKNE ====================
+
+model Tekne {
+  id            String    @id @default(cuid())
+  ad            String
+  seriNo        String?   @unique @map("seri_no")
+  marka         String?
+  model         String?
+  boyut         Float?    // metre
+  motorTipi     String?   @map("motor_tipi")
+  motorSeriNo   String?   @map("motor_seri_no")
+  yil           Int?
+  renk          String?
+  mulkiyet      String?   // Sahibi / Firma
+  adres         String?
+  telefon       String?
+  email         String?
+  aciklama      String?
+  aktif         Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  servisler     Service[] @relation("Tekne_Servisler")
+
+  @@index([aktif])
+  @@index([marka])
+  @@map("tekne")
+}
+
+// ==================== SERVİS ====================
+
+model Service {
+  id               String        @id @default(cuid())
+  tarih            DateTime?     @db.Date
+  saat             String?
+  isTuru           IsTuru        @default(PAKET) @map("is_turu")
+  tekneId          String        @map("tekne_id")
+  tekneAdi         String        @map("tekne_adi") // Redundant for faster queries
+  adres            String
+  yer              String        // Lokasyon (Yatmarin, Netsel, vs.)
+  servisAciklamasi String        @map("servis_aciklamasi")
+  irtibatKisi      String?       @map("irtibat_kisi")
+  telefon          String?
+  durum            ServisDurumu  @default(RANDEVU_VERILDI) @map("durum")
+  ofisYetkiliId    String?       @map("ofisyetkili_id")
+  taseronNotlari   String?       @map("taseron_notlari")
+
+  // YENİ: Manuel zorluk seviyesi override - Admin tarafından seçilebilir
+  zorlukSeviyesi    ZorlukSeviyesi? @map("zorluk_seviyesi")
+
+  // Zaman damgaları
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  deletedAt        DateTime?     @map("deleted_at")
+  tamamlanmaAt     DateTime?     @map("tamamlanma_at")
+
+  // Relations
+  tekne            Tekne         @relation("Tekne_Servisler", fields: [tekneId], references: [id], onDelete: Cascade)
+  ofisYetkili      User?         @relation("User_OfisServisler", fields: [ofisYetkiliId], references: [id])
+  personeller      ServicePersonel[]
+  bekleyenParcalar ParcaBekleme[]
+  puanlar          ServisPuan[]
+  kapanisRaporu    KapanisRaporu?
+
+  @@index([tarih])
+  @@index([durum])
+  @@index([isTuru])
+  @@index([tekneId])
+  @@index([ofisYetkiliId])
+  @@index([yer]) // YENİ: Lokasyon bazlı filtreleme için
+  @@map("servis")
+}
+
+model ServicePersonel {
+  id           String        @id @default(cuid())
+  servisId     String        @map("servis_id")
+  personelId   String        @map("personel_id")
+  rol          PersonelRol   @default(SORUMLU) // sorumlu, destek
+  bonus        Boolean       @default(false)
+
+  // Zaman damgaları
+  atamaTarihi  DateTime      @default(now()) @map("atama_tarihi")
+
+  // Relations
+  servis       Service       @relation(fields: [servisId], references: [id], onDelete: Cascade)
+  personel     Personel      @relation(fields: [personelId], references: [id], onDelete: Cascade)
+
+  @@unique([servisId, personelId])
+  @@index([servisId])
+  @@index([personelId])
+  @@map("service_personel")
+}
+
+enum PersonelRol {
+  SORUMLU
+  DESTEK
+}
+
+model ParcaBekleme {
+  id              String    @id @default(cuid())
+  servisId        String    @map("servis_id")
+  parcaAdi        String    @map("parca_adi")
+  miktar          Int
+  birim           String?   // adet, metre, kg, vs.
+  tedarikci       String?
+  beklenenTarih   DateTime? @map("beklenen_tarih")
+  aciklama        String?
+  tamamlandi      Boolean   @default(false) @map("tamamlandi")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  servis          Service   @relation(fields: [servisId], references: [id], onDelete: Cascade)
+
+  @@index([servisId])
+  @@index([tamamlandi])
+  @@map("parca_bekleme")
+}
+
+enum IsTuru {
+  PAKET    // Rutin paket iş
+  ARIZA    // Arıza / Keşif
+  PROJE    // Proje / Refit
+}
+
+// YENİ: Zorluk seviyesi enum - Servis zorluk derecesi ve çarpanı
+enum ZorlukSeviyesi {
+  RUTIN    // 1.0x - Rutin-Basit Servis
+  ARIZA    // 1.2x - Arıza Çözüm
+  PROJE    // 1.5x - Proje-Büyük Servis
+}
+
+enum ServisDurumu {
+  RANDEVU_VERILDI
+  DEVAM_EDİYOR
+  PARCA_BEKLIYOR
+  MUSTERI_ONAY_BEKLIYOR
+  RAPOR_BEKLIYOR
+  KESIF_KONTROL
+  TAMAMLANDI
+  IPTAL
+  ERTELENDI
+}
+
+// ==================== KAPANIŞ RAPORU ====================
+
+model KapanisRaporu {
+  id                  String   @id @default(cuid())
+  servisId            String   @unique @map("servis_id")
+
+  // Rapor gereksinimleri
+  uniteBilgileri      Boolean  @default(false) @map("unite_bilgileri")
+  fotograf            Boolean  @default(false)
+  tekneKonum          Boolean  @default(false) @map("tekne_konum")
+  sarfMalzeme         Boolean  @default(false) @map("sarf_malzeme")
+  adamSaat            Boolean  @default(false) @map("adam_saat")
+  taseronBilgisi      Boolean  @default(false) @map("taseron_bilgisi")
+  stokMalzeme         Boolean  @default(false) @map("stok_malzeme")
+
+  // Puan dışı alanlar
+  saatiOlmayanUnitePuanDisi      Boolean  @default(false) @map("saati_olmayan_unite_puan_disi")
+  adamSaatUygulanmazPuanDisi     Boolean  @default(false) @map("adam_saat_uygulanmaz_puan_disi")
+
+  // Açıklama
+  aciklama            String   @db.Text
+
+  // Kim hazırladı
+  raporlayanPersonel  String   @map("raporlayan_personel")
+  raporTarihi         DateTime @default(now()) @map("rapor_tarihi")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  servis              Service  @relation(fields: [servisId], references: [id], onDelete: Cascade)
+
+  @@map("kapanis_raporu")
+}
+
+// ==================== PUANLAMA SİSTEMİ ====================
+
+model ServisPuan {
+  id              String      @id @default(cuid())
+  servisId        String      @map("servis_id")
+  personelId      String      @map("personel_id")
+  personelAd      String      @map("personel_ad")
+
+  // Puanlama detayları
+  rol             PersonelRol  @default(SORUMLU)
+  isTuru          IsTuru       @map("is_turu")
+
+  // Rapor başarısı (0-1 arası)
+  seriNoVar       Boolean      @default(false) @map("seri_no_var")
+  fotografVar     Boolean      @default(false) @map("fotograf_var")
+  aciklamaVar     Boolean      @default(false) @map("aciklama_var")
+  saatVar         Boolean      @default(false) @map("saat_var")
+  raporBasarisi   Float        @default(0) @map("rapor_basarisi")
+
+  // Puan hesaplama
+  hamPuan         Float        @default(0) @map("ham_puan")
+  zorlukCarpani   Float        @default(1) @map("zorluk_carpani")
+  finalPuan       Float        @map("final_puan")
+  bonus           Boolean      @default(false)
+
+  // YENİ: Kayıt anındaki katsayı version ID'si - Geçmiş puanlar katsayı değişikliğinden etkilenmesin
+  savedMultiplierId   String?   @map("saved_multiplier_id")
+
+  notlar          String?      @db.Text
+  tarih           DateTime     @default(now())
+
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  servis          Service      @relation(fields: [servisId], references: [id], onDelete: Cascade)
+  personel        Personel     @relation(fields: [personelId], references: [id], onDelete: Cascade)
+
+  @@index([servisId])
+  @@index([personelId])
+  @@index([tarih])
+  @@map("servis_puan")
+}
+
+// Yetkili Değerlendirmesi - Usta
+model YetkiliDegerlendirmeUsta {
+  id                  String   @id @default(cuid())
+  personnelId         String   @map("personnel_id")
+  personnelAd         String   @map("personnel_ad")
+  ay                  String   // YYYY-MM format
+  yetkiliId           String   @map("yetkili_id")
+
+  // Soru puanları (EVET: 100, KISMEN: 60, HAYIR: 0, ATLA: null)
+  uniformaVeIsg       Int?     @map("uniforma_ve_isg")
+  musteriIletisimi    Int?     @map("musteri_iletisimi")
+  planlamaKoordinasyon Int?    @map("planlama_koordinasyon")
+  teknikTespit        Int?     @map("teknik_tespit")
+  raporDokumantasyon  Int?     @map("rapor_dokumantasyon")
+  genelLiderlik       Int?     @map("genel_liderlik")
+
+  toplamPuan          Float    @default(0) @map("toplam_puan")
+  notlar              String?  @db.Text
+  kilitlendi          Boolean  @default(false) @map("kilitlendi")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  yetkili             User     @relation("YetkiliDegerlendirmeUsta_Yetkili", fields: [yetkiliId], references: [id])
+  personel            Personel @relation(fields: [personnelId], references: [id])
+
+  @@unique([personnelId, ay])
+  @@index([ay])
+  @@map("yetkili_degerlendirme_usta")
+}
+
+// Yetkili Değerlendirmesi - Çırak
+model YetkiliDegerlendirmeCirak {
+  id                  String   @id @default(cuid())
+  personnelId         String   @map("personnel_id")
+  personnelAd         String   @map("personnel_ad")
+  ay                  String   // YYYY-MM format
+  yetkiliId           String   @map("yetkili_id")
+
+  // Soru puanları
+  uniformaVeIsg       Int?     @map("uniforma_ve_isg")
+  ekipIciDavranis     Int?     @map("ekip_ici_davranis")
+  destekKalitesi      Int?     @map("destek_kalitesi")
+  ogrenmeGelisim      Int?     @map("ogrenme_gelisim")
+
+  toplamPuan          Float    @default(0) @map("toplam_puan")
+  notlar              String?  @db.Text
+  kilitlendi          Boolean  @default(false) @map("kilitlendi")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  yetkili             User     @relation("YetkiliDegerlendirmeCirak_Yetkili", fields: [yetkiliId], references: [id])
+  personel            Personel @relation(fields: [personnelId], references: [id])
+
+  @@unique([personnelId, ay])
+  @@index([ay])
+  @@map("yetkili_degerlendirme_cirak")
+}
+
+// İsmail Çoban Değerlendirmesi
+model IsmailDegerlendirme {
+  id              String   @id @default(cuid())
+  personnelId     String   @map("personnel_id")
+  personnelAd     String   @map("personnel_ad")
+  ay              String   // YYYY-MM format
+  puan            Int      // 1-5 arası
+  notlar          String?  @db.Text
+  kilitlendi      Boolean  @default(false) @map("kilitlendi")
+  kayitTarihi     DateTime @default(now()) @map("kayit_tarihi")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  personel        Personel @relation(fields: [personnelId], references: [id])
+
+  @@unique([personnelId, ay])
+  @@index([ay])
+  @@map("ismail_degerlendirme")
+}
+
+// Aylık Performans Özeti
+model AylikPerformans {
+  id                  String   @id @default(cuid())
+  personnelId         String   @map("personnel_id")
+  personnelAd         String   @map("personnel_ad")
+  ay                  String   // YYYY-MM format
+
+  // Servis istatistikleri
+  servisSayisi        Int      @default(0) @map("servis_sayisi")
+  sorumluServis       Int      @default(0) @map("sorumlu_servis")
+  destekServis        Int      @default(0) @map("destek_servis")
+
+  // Puan ortalamaları
+  bireyselPuanOrt     Float    @default(0) @map("bireysel_puan_ort")
+  yetkiliPuanOrt      Float    @default(0) @map("yetkili_puan_ort")
+  ismailPuani         Int?     @map("ismail_puani")
+
+  // Hesaplanan toplam puan
+  toplamPuan          Float    @default(0) @map("toplam_puan")
+
+  // Sıralama ve rozet
+  siralama            Int?     // Ay içindeki sıralaması
+  rozet               Rozet?   // ALTIN, GUMUS, BRONZ
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  personel            Personel @relation(fields: [personnelId], references: [id])
+
+  @@unique([personnelId, ay])
+  @@index([ay])
+  @@index([rozet])
+  @@map("aylik_performans")
+}
+
+enum Rozet {
+  ALTIN
+  GUMUS
+  BRONZ
+}
+
+// ==================== AUDIT LOG ====================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  userEmail   String?  @map("user_email")
+  islemTuru   String   @map("islem_turu") // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+  entityTipi  String   @map("entity_tipi") // Service, Personel, etc.
+  entityId    String?  @map("entity_id")
+  detay       String?  @db.Text
+  ipAdresi    String?  @map("ip_adresi")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([islemTuru])
+  @@index([entityTipi, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ==================== SETTINGS ====================
+
+model Setting {
+  id          String   @id @default(cuid())
+  anahtar     String   @unique
+  deger       String   @db.Text
+  aciklama    String?  @db.Text
+  kategori    String?
+  guncelleyen String?  @map("guncelleyen")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([kategori])
+  @@map("settings")
+}
+
+// ==================== SYNC LOG ====================
+
+model SyncLog {
+  id              String     @id @default(cuid())
+  sheetName       String     @map("sheet_name")
+  syncType        String     @default("INCREMENTAL") @map("sync_type")
+  status          String
+  recordsCreated  Int        @default(0) @map("records_created")
+  recordsUpdated  Int        @default(0) @map("records_updated")
+  recordsDeleted  Int        @default(0) @map("records_deleted")
+  durationMs      Int?       @map("duration_ms")
+  errors          String?    @db.Text
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  @@index([sheetName])
+  @@index([createdAt])
+  @@index([status])
+  @@map("sync_log")
+}
+
+// ==================== DİNAMİK PUANLAMA SİSTEMİ ====================
+
+// Admin tarafından yönetilebilir soru havuzu
+model PuanlamaSoru {
+  id          String          @id @default(cuid())
+  key         String          @unique
+  label       String
+  aciklama    String          @db.Text
+  kategori    SoruKategorisi
+  aktif       Boolean         @default(true)
+  sira        Int             @default(0)
+  agirlik     Float           @default(1.0)
+
+  // YENİ: Rapor kontrolü ile ilgili ek alanlar
+  raporKontrolMu     Boolean   @default(false) @map("rapor_kontrol_mu")  // Bu soru rapor kontrolü mü?
+  isTuruFilter        IsTuru?   @map("is_turu_filter")                   // Hangi iş türünde geçerli? (null = hepsi)
+  zorunluMu          Boolean   @default(true) @map("zorunlu_mu")        // Zorunlu mu opsiyonel mi?
+
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([kategori, aktif])
+  @@index([raporKontrolMu, aktif])
+  @@map("puanlama_soru")
+}
+
+enum SoruKategorisi {
+  USTA
+  CIRAK
+  GENEL
+}
+
+// İş türü bazlı zorluk çarpanları (Admin ayarlanabilir)
+model ZorlukKatsayi {
+  id            String    @id @default(cuid())
+  isTuru        IsTuru    @unique
+  label         String    // "Rutin-Basit Servis", "Arıza Çözüm", "Proje-Büyük Servis"
+  carpan        Float     @default(1.0)
+  gecerliTarih  DateTime  @default(now()) @map("gecerli_tarih")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("zorluk_katsayi")
+}
+
+// Rozet (Altın, Gümüş, Bronz) kazanma kuralları
+model RozetKriteri {
+  id          String    @id @default(cuid())
+  rozet       Rozet     @unique
+  siralama    Int       // 1, 2, 3 (top 3 için)
+  aktif       Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("rozet_kriteri")
+}
+
+// Katsayı değişikliklerinin versiyonlanması (geçmiş puanlar etkilenmesin)
+model KatsayiGecmisi {
+  id            String    @id @default(cuid())
+  isTuru        IsTuru
+  eskiCarpan    Float     @map("eski_carpan")
+  yeniCarpan    Float     @map("yeni_carpan")
+  degistirenId  String    @map("degistiren_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([isTuru])
+  @@map("katsayi_gecmisi")
+}
