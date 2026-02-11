@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sync Module - Export all sync-related utilities
  */
 
@@ -7,6 +7,11 @@ export * from './types';
 
 // Sheet configurations
 export * from './sheet-config';
+
+// Ingestion/sanitization layer
+export * from './sync-service';
+export * from './utils/smart-date-parser';
+export * from './utils/status-mapper';
 
 // Sync manager
 export { SyncManager, createSyncManager } from './sync-manager';

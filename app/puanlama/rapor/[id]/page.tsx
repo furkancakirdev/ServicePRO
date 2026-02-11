@@ -70,7 +70,7 @@ export default function KapanisRaporPage() {
         // TODO: API call
         console.log('Rapor:', rapor);
         console.log('Başarı:', raporBasarisi, 'Sorumlu Puan:', sorumlPuan.finalPuan);
-        router.push('/planlama');
+        router.push('/servisler');
     };
 
     return (
@@ -345,6 +345,7 @@ export default function KapanisRaporPage() {
         </div>
     );
 }
+
 
 
 

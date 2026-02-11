@@ -12,6 +12,9 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { createHash } from 'crypto';
 import { normalizeLokasyonText } from '@/lib/domain-mappers';
+import { sanitizePlanlamaRow, SanitizedPlanlamaRow } from './sync-service';
+import { mapSheetStatusToDbStatus } from './utils/status-mapper';
+import { parseSmartDateToUtcDate } from './utils/smart-date-parser';
 
 type SyncMode = 'incremental' | 'full_reset';
 const DEFAULT_SPREADSHEET_ID = '1IGa23ZXugvCGblp4GtE2Tl06Z2mnZ2VxIM_F6vyolVs';
@@ -59,69 +62,8 @@ function normalizePhone(phone: string | null): string | null {
   return compact.length ? compact : null;
 }
 
-function canonicalizeStatusToken(value: unknown): string {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-
-  return raw
-    .replace(/[İIıi]/g, 'I')
-    .replace(/[Çç]/g, 'C')
-    .replace(/[Ğğ]/g, 'G')
-    .replace(/[Öö]/g, 'O')
-    .replace(/[Şş]/g, 'S')
-    .replace(/[Üü]/g, 'U')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-const DEVAM_EDIYOR_STATUS: ServisDurumu =
-  ((ServisDurumu as unknown as Record<string, ServisDurumu>).DEVAM_EDIYOR ??
-    (ServisDurumu as unknown as Record<string, ServisDurumu>)['DEVAM_EDİYOR']) as ServisDurumu;
-
 function normalizeStatus(value: unknown): ServisDurumu {
-  const normalized = canonicalizeStatusToken(value);
-  if (!normalized) return ServisDurumu.RANDEVU_VERILDI;
-
-  if (normalized.includes('IPTAL')) return ServisDurumu.IPTAL;
-  if (normalized.includes('ERTEL')) return ServisDurumu.ERTELENDI;
-  if (normalized.includes('BITTI') || normalized.includes('TAMAM')) return ServisDurumu.TAMAMLANDI;
-  if (normalized.includes('DEVAM')) return DEVAM_EDIYOR_STATUS;
-  if (normalized.includes('PARCA')) return ServisDurumu.PARCA_BEKLIYOR;
-  if (normalized.includes('ONAY')) return ServisDurumu.MUSTERI_ONAY_BEKLIYOR;
-  if (normalized.includes('RAPOR')) return ServisDurumu.RAPOR_BEKLIYOR;
-  if (normalized.includes('KESIF') || normalized.includes('KONTROL')) return ServisDurumu.KESIF_KONTROL;
-  if (normalized.includes('RANDEVU') || normalized.includes('PLANLANDI')) return ServisDurumu.RANDEVU_VERILDI;
-
-  const map: Record<string, ServisDurumu> = {
-    RANDEVU_VERILDI: ServisDurumu.RANDEVU_VERILDI,
-    'PLANLANDI-RANDEVU': ServisDurumu.RANDEVU_VERILDI,
-    DEVAM_EDIYOR: DEVAM_EDIYOR_STATUS,
-    PARCA_BEKLIYOR: ServisDurumu.PARCA_BEKLIYOR,
-    MUSTERI_ONAY_BEKLIYOR: ServisDurumu.MUSTERI_ONAY_BEKLIYOR,
-    RAPOR_BEKLIYOR: ServisDurumu.RAPOR_BEKLIYOR,
-    KESIF_KONTROL: ServisDurumu.KESIF_KONTROL,
-    TAMAMLANDI: ServisDurumu.TAMAMLANDI,
-    IPTAL: ServisDurumu.IPTAL,
-    ERTELENDI: ServisDurumu.ERTELENDI,
-  };
-  return map[normalized] ?? ServisDurumu.RANDEVU_VERILDI;
-}
-
-function shouldSkipPlanlamaStatus(status: unknown): boolean {
-  const token = canonicalizeStatusToken(status);
-  if (token === 'TAMAMLANDI' || token === 'KESIF_KONTROL' || token === 'BITTI') {
-    return true;
-  }
-
-  // "BİTTİ" benzeri metinler normalizeStatus içinde TAMAMLANDI'ya çevrilir.
-  const normalizedStatus = normalizeStatus(status);
-  return (
-    normalizedStatus === ServisDurumu.TAMAMLANDI ||
-    normalizedStatus === ServisDurumu.KESIF_KONTROL
-  );
+  return mapSheetStatusToDbStatus(value).status;
 }
 
 export class SyncManager {
@@ -366,36 +308,28 @@ export class SyncManager {
 
     let skippedByStatusCount = 0;
     let invalidRowCount = 0;
-    const transformedRows = rawDataRows
+    const sanitizedRows = rawDataRows
       .map((row) => this.transformRowData(config, row, resolution.indexMap))
-      .map((row) => {
-        const normalizedDurum = normalizeStatus(row.durum);
-        return {
-          id: String(row.id || this.generatePlanlamaServiceId(row)).trim(),
-          tarih: this.normalizePlanlamaDate(row.tarih),
-          saat: row.saat ? String(row.saat) : null,
-          tekneAdi: String(row.tekneAdi || '').trim(),
-          adres: normalizeLokasyonText(row.adres),
-          yer: normalizeLokasyonText(row.yer),
-          servisAciklamasi: String(row.servisAciklamasi || '').trim(),
-          telefon: normalizePhone(row.telefon as string | null),
-          durum: normalizedDurum,
-        };
-      })
-      .filter((row) => {
-        if (!row.id || !row.tekneAdi || !row.servisAciklamasi) {
-          invalidRowCount++;
-          return false;
-        }
-        if (shouldSkipPlanlamaStatus(row.durum)) {
-          skippedByStatusCount++;
-          return false;
-        }
-        return true;
-      });
+      .map((row) => this.sanitizePlanlamaRecord(row));
 
-    const uniqueRows = Array.from(new Map(transformedRows.map((row) => [row.id, row])).values());
-    invalidRowCount += transformedRows.length - uniqueRows.length;
+    const effectiveRows = sanitizedRows.filter((row) => {
+      if (row.skipReason === 'MISSING_REQUIRED') {
+        invalidRowCount++;
+        return false;
+      }
+      if (row.skipReason === 'STATUS_FILTERED') {
+        skippedByStatusCount++;
+        return false;
+      }
+      if (!row.id || !row.tekneAdi || !row.servisAciklamasi) {
+        invalidRowCount++;
+        return false;
+      }
+      return true;
+    });
+
+    const uniqueRows = Array.from(new Map(effectiveRows.map((row) => [row.id, row])).values());
+    invalidRowCount += effectiveRows.length - uniqueRows.length;
 
     const dbRows = await prisma.service.findMany({
       where: { id: { in: uniqueRows.map((row) => row.id) } },
@@ -513,6 +447,10 @@ export class SyncManager {
     };
   }
 
+  private sanitizePlanlamaRecord(row: Record<string, unknown>): SanitizedPlanlamaRow {
+    return sanitizePlanlamaRow(row, (candidateRow) => this.generatePlanlamaServiceId(candidateRow));
+  }
+
   private async runPlanlamaIncremental(rows: Record<string, unknown>[], runId: string): Promise<SyncResult> {
     let created = 0;
     let updated = 0;
@@ -526,41 +464,34 @@ export class SyncManager {
     const tekneIds = new Map<string, { ad: string; adres: string; telefon: string | null }>();
 
     for (const row of rows) {
-      const id = String(row.id || this.generatePlanlamaServiceId(row)).trim();
-      const tekneAdi = String(row.tekneAdi || '').trim();
-      const servisAciklamasi = String(row.servisAciklamasi || '').trim();
-      const normalizedDurum = normalizeStatus(row.durum);
-      if (!id || !tekneAdi || !servisAciklamasi) {
-        skipped++;
-        continue;
-      }
-      if (shouldSkipPlanlamaStatus(normalizedDurum)) {
+      const sanitized = this.sanitizePlanlamaRecord(row);
+      if (sanitized.skipReason !== 'NONE') {
         skipped++;
         continue;
       }
 
-      const tekneId = `sheet-tekne-${tekneAdi.toLowerCase()}`;
+      const tekneId = `sheet-tekne-${sanitized.tekneAdi.toLowerCase()}`;
       tekneIds.set(tekneId, {
-        ad: tekneAdi,
-        adres: normalizeLokasyonText(row.adres),
-        telefon: normalizePhone(row.telefon as string | null),
+        ad: sanitized.tekneAdi,
+        adres: sanitized.adres,
+        telefon: sanitized.telefon,
       });
 
       preparedRows.push({
-        id,
+        id: sanitized.id,
         tekneId,
         payload: {
-          id,
-          tarih: this.normalizePlanlamaDate(row.tarih),
-          saat: row.saat ? String(row.saat) : null,
+          id: sanitized.id,
+          tarih: sanitized.tarih,
+          saat: sanitized.saat,
           tekneId,
-          tekneAdi,
-          adres: normalizeLokasyonText(row.adres),
-          yer: normalizeLokasyonText(row.yer),
-          servisAciklamasi,
-          irtibatKisi: row.irtibatKisi ? String(row.irtibatKisi) : null,
-          telefon: normalizePhone(row.telefon as string | null),
-          durum: normalizedDurum,
+          tekneAdi: sanitized.tekneAdi,
+          adres: sanitized.adres,
+          yer: sanitized.yer,
+          servisAciklamasi: sanitized.servisAciklamasi,
+          irtibatKisi: sanitized.irtibatKisi,
+          telefon: sanitized.telefon,
+          durum: sanitized.durum,
           isTuru: 'PAKET',
           deletedAt: null,
         },
@@ -700,39 +631,31 @@ export class SyncManager {
     }> = [];
 
     for (const row of rows) {
-      const id = String(row.id || this.generatePlanlamaServiceId(row)).trim();
-      const tekneAdi = String(row.tekneAdi || '').trim();
-      const servisAciklamasi = String(row.servisAciklamasi || '').trim();
-      const normalizedDurum = normalizeStatus(row.durum);
-
-      if (!id || !tekneAdi || !servisAciklamasi) {
-        skipped++;
-        continue;
-      }
-      if (shouldSkipPlanlamaStatus(normalizedDurum)) {
+      const sanitized = this.sanitizePlanlamaRecord(row);
+      if (sanitized.skipReason !== 'NONE') {
         skipped++;
         continue;
       }
 
-      const tekneId = `sheet-tekne-${tekneAdi.toLowerCase()}`;
+      const tekneId = `sheet-tekne-${sanitized.tekneAdi.toLowerCase()}`;
       preparedRows.push({
-        id,
+        id: sanitized.id,
         tekneId,
-        tekneAdi,
-        tekneAdres: normalizeLokasyonText(row.adres),
-        tekneTelefon: normalizePhone(row.telefon as string | null),
+        tekneAdi: sanitized.tekneAdi,
+        tekneAdres: sanitized.adres,
+        tekneTelefon: sanitized.telefon,
         payload: {
-          id,
-          tarih: this.normalizePlanlamaDate(row.tarih),
-          saat: row.saat ? String(row.saat) : null,
+          id: sanitized.id,
+          tarih: sanitized.tarih,
+          saat: sanitized.saat,
           tekneId,
-          tekneAdi,
-          adres: normalizeLokasyonText(row.adres),
-          yer: normalizeLokasyonText(row.yer),
-          servisAciklamasi,
-          irtibatKisi: row.irtibatKisi ? String(row.irtibatKisi) : null,
-          telefon: normalizePhone(row.telefon as string | null),
-          durum: normalizedDurum,
+          tekneAdi: sanitized.tekneAdi,
+          adres: sanitized.adres,
+          yer: sanitized.yer,
+          servisAciklamasi: sanitized.servisAciklamasi,
+          irtibatKisi: sanitized.irtibatKisi,
+          telefon: sanitized.telefon,
+          durum: sanitized.durum,
           isTuru: 'PAKET',
         },
       });
@@ -993,20 +916,7 @@ export class SyncManager {
   }
 
   private normalizePlanlamaDate(value: unknown): Date | null {
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-      const isoDate = value.toISOString().slice(0, 10);
-      return TRANSFORMS.toDate(isoDate) as Date | null;
-    }
-
-    if (typeof value === 'number') {
-      return TRANSFORMS.toDate(String(value)) as Date | null;
-    }
-
-    if (typeof value === 'string' && value.trim()) {
-      return TRANSFORMS.toDate(value.trim()) as Date | null;
-    }
-
-    return null;
+    return parseSmartDateToUtcDate(value).date;
   }
 
   private generatePlanlamaServiceId(row: Record<string, unknown>): string {
@@ -1146,8 +1056,3 @@ export async function createSyncManager(): Promise<SyncManager | null> {
 
   return new SyncManager(serviceAccountEmail, privateKey, spreadsheetId);
 }
-
-
-
-
-

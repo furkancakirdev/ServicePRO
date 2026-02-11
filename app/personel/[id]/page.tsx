@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -53,13 +53,13 @@ export default function PersonelDetailPage() {
         body: JSON.stringify({ unvan: selectedUnvan }),
       });
 
-      if (!res.ok) throw new Error('Unvan güncellenemedi');
+      if (!res.ok) throw new Error('Unvan gÃ¼ncellenemedi');
       const updated = await res.json();
       setPersonel((prev) => (prev ? { ...prev, unvan: updated.unvan } : prev));
       setEditingUnvan(false);
     } catch (error) {
-      console.error('Unvan güncelleme hatası:', error);
-      alert('Unvan güncellenemedi');
+      console.error('Unvan gÃ¼ncelleme hatasÄ±:', error);
+      alert('Unvan gÃ¼ncellenemedi');
     } finally {
       setSavingUnvan(false);
     }
@@ -68,7 +68,7 @@ export default function PersonelDetailPage() {
   if (loading) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <p>Yükleniyor...</p>
+        <p>YÃ¼kleniyor...</p>
       </div>
     );
   }
@@ -76,10 +76,10 @@ export default function PersonelDetailPage() {
   if (!personel) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <h2>Personel bulunamadı</h2>
+        <h2>Personel bulunamadÄ±</h2>
         <p style={{ color: 'var(--color-text-muted)' }}>ID: {id}</p>
         <Link href="/personel" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
-          ← Personel listesine dön
+          â† Personel listesine dÃ¶n
         </Link>
       </div>
     );
@@ -94,7 +94,7 @@ export default function PersonelDetailPage() {
         <div className="hero-content" style={{ width: '100%', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
             <button onClick={() => router.back()} className="btn btn-secondary" style={{ padding: 'var(--space-sm)' }}>
-              ←
+              â†
             </button>
             <div>
               <h1 className="hero-title">{personel.ad}</h1>
@@ -113,7 +113,7 @@ export default function PersonelDetailPage() {
                 </span>
                 {personel.girisYili && (
                   <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                    {new Date().getFullYear() - personel.girisYili} yıldır çalışıyor
+                    {new Date().getFullYear() - personel.girisYili} yÄ±ldÄ±r Ã§alÄ±ÅŸÄ±yor
                   </span>
                 )}
               </div>
@@ -129,21 +129,21 @@ export default function PersonelDetailPage() {
                   onChange={(e) => setSelectedUnvan(e.target.value as 'usta' | 'cirak' | 'yonetici' | 'ofis')}
                   style={{ minWidth: 180 }}
                 >
-                  <option value="usta">Ustabaşı</option>
-                  <option value="cirak">Çırak</option>
-                  <option value="yonetici">Yönetici</option>
+                  <option value="usta">UstabaÅŸÄ±</option>
+                  <option value="cirak">Ã‡Ä±rak</option>
+                  <option value="yonetici">YÃ¶netici</option>
                   <option value="ofis">Ofis</option>
                 </select>
                 <button className="btn btn-primary" onClick={handleUnvanSave} disabled={savingUnvan}>
                   {savingUnvan ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
                 <button className="btn btn-secondary" onClick={() => setEditingUnvan(false)} disabled={savingUnvan}>
-                  Vazgeç
+                  VazgeÃ§
                 </button>
               </>
             ) : (
               <button className="btn btn-secondary" onClick={() => setEditingUnvan(true)}>
-                Ünvanı Düzenle
+                ÃœnvanÄ± DÃ¼zenle
               </button>
             )}
           </div>
@@ -203,15 +203,15 @@ export default function PersonelDetailPage() {
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>Rozetler</h3>
             <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>🥇</div>
+                <div style={{ fontSize: '2rem' }}>ğŸ¥‡</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-gold)' }}>{personel.altinRozet || 0}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>🥈</div>
+                <div style={{ fontSize: '2rem' }}>ğŸ¥ˆ</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-silver)' }}>{personel.gumusRozet || 0}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>🥉</div>
+                <div style={{ fontSize: '2rem' }}>ğŸ¥‰</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-bronze)' }}>{personel.bronzRozet || 0}</div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function PersonelDetailPage() {
 
           {assignedServices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-muted)' }}>
-              Henüz atanan servis yok
+              HenÃ¼z atanan servis yok
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -232,7 +232,7 @@ export default function PersonelDetailPage() {
                 return (
                   <Link
                     key={service.id}
-                    href={`/planlama/${service.id}`}
+                    href={`/servisler/${service.id}/duzenle`}
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -248,7 +248,7 @@ export default function PersonelDetailPage() {
                     <div>
                       <div style={{ fontWeight: 500 }}>{service.tekneAdi}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                        {service.tarih} • {service.adres}
+                        {service.tarih} â€¢ {service.adres}
                       </div>
                     </div>
                     <span
@@ -273,4 +273,5 @@ export default function PersonelDetailPage() {
     </div>
   );
 }
+
 

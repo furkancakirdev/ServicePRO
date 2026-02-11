@@ -1,140 +1,204 @@
-﻿"use client";
+﻿'use client';
 
-import { ColumnDef } from "@tanstack/react-table";
-import { Service } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import * as React from 'react';
+import { ColumnDef, FilterFn, Row, Table } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, CheckCircle, MoreHorizontal, Pencil } from "lucide-react";
-import { normalizeServisDurumuForApp } from "@/lib/domain-mappers";
-import { formatDateOnlyTR, parseDateOnlyToUtcDate } from "@/lib/date-utils";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowUpDown } from 'lucide-react';
+import { formatDateDdmmyyyShortMonth, isDateBeforeTodayUtc } from '@/lib/date-utils';
+import { getStatusConfig } from '@/lib/config/status-config';
+import { cn } from '@/lib/utils';
+import { DataTableRowActions } from '@/components/table/data-table-row-actions';
+import { ServiceGridRow, ServiceTableMeta, STATUS_FILTER_OPTIONS } from './types';
 
-function parseServiceDate(value: unknown): Date | null {
-  return parseDateOnlyToUtcDate(value);
-}
-
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  RANDEVU_VERILDI: { label: "Planlandı / Randevulu", color: "bg-blue-500" },
-  DEVAM_EDIYOR: { label: "Devam Ediyor", color: "bg-amber-500" },
-  PARCA_BEKLIYOR: { label: "Parça Bekliyor", color: "bg-orange-500" },
-  MUSTERI_ONAY_BEKLIYOR: { label: "Müşteri Onayı Bekliyor", color: "bg-purple-500" },
-  RAPOR_BEKLIYOR: { label: "Rapor Bekliyor", color: "bg-indigo-500" },
-  KESIF_KONTROL: { label: "Keşif / Kontrol", color: "bg-cyan-500" },
-  TAMAMLANDI: { label: "Tamamlandı", color: "bg-emerald-600" },
-  IPTAL: { label: "İptal", color: "bg-red-500" },
-  ERTELENDI: { label: "Ertelendi", color: "bg-zinc-500" },
+const multiSelectFilter: FilterFn<ServiceGridRow> = (row, columnId, filterValue) => {
+  const selected = Array.isArray(filterValue) ? filterValue.map(String) : [];
+  if (!selected.length) return true;
+  return selected.includes(String(row.getValue(columnId) ?? ''));
 };
 
-export const columns: ColumnDef<Service>[] = [
+function formatDateCell(value: string | null): string {
+  if (!value) return 'Tarih Yok';
+  return formatDateDdmmyyyShortMonth(value);
+}
+
+function isServiceOverdue(service: ServiceGridRow): boolean {
+  return (
+    isDateBeforeTodayUtc(service.tarih) &&
+    service.durum !== 'TAMAMLANDI' &&
+    service.durum !== 'IPTAL'
+  );
+}
+
+const QuickStatusSelect = React.memo(function QuickStatusSelect({
+  row,
+  table,
+}: {
+  row: Row<ServiceGridRow>;
+  table: Table<ServiceGridRow>;
+}) {
+  const meta = table.options.meta as ServiceTableMeta | undefined;
+  const service = row.original;
+  const currentStatus = service.durum;
+  const statusConfig = getStatusConfig(currentStatus);
+  const isPending = meta?.isServiceStatusUpdating(service.id) ?? false;
+
+  const handleStatusChange = (nextStatus: string) => {
+    if (!meta) return;
+    if (nextStatus === currentStatus) return;
+    void meta.onServiceStatusChange(service.id, nextStatus);
+  };
+
+  return (
+    <div onClick={(event) => event.stopPropagation()}>
+      <Select value={currentStatus} onValueChange={handleStatusChange} disabled={!meta || isPending}>
+        <SelectTrigger
+          className={cn(
+            'h-8 min-w-[170px] border-0 px-2 text-xs font-medium shadow-none',
+            statusConfig.bgColor,
+            statusConfig.color
+          )}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SelectValue placeholder="Durum sec" />
+        </SelectTrigger>
+        <SelectContent
+          align="end"
+          className="border-slate-800 bg-slate-900 text-slate-100"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {STATUS_FILTER_OPTIONS.map((statusOption) => (
+            <SelectItem key={statusOption.value} value={statusOption.value}>
+              {statusOption.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+});
+
+export const serviceColumns: ColumnDef<ServiceGridRow>[] = [
   {
-    accessorKey: "tarih",
+    accessorKey: 'tarih',
     header: ({ column }) => (
-      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-        TARİH SAAT
+      <Button
+        variant="ghost"
+        className="px-0 text-xs font-semibold uppercase tracking-wide"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Tarih
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => {
-      const date = parseServiceDate(row.getValue("tarih"));
-      const saat = String(row.original.saat ?? "").trim();
-      if (!date) {
-        return <div className="text-muted-foreground">Geçersiz tarih</div>;
-      }
-      return (
-        <div className="flex flex-col">
-          <span className="font-medium">{formatDateOnlyTR(date)}</span>
-          <span className="text-xs text-muted-foreground">{saat || "--:--"}</span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "tekneAdi",
-    header: "TEKNE ADI",
-  },
-  {
-    accessorKey: "yer",
-    header: "ADRES",
-    cell: ({ row }) => {
-      const yer = String(row.getValue("yer") ?? "");
-      const adres = String(row.original.adres ?? "");
-      return (
-        <div className="max-w-[280px]">
-          <div className="truncate font-medium" title={yer}>
-            {yer || "-"}
-          </div>
-          {adres && (
-            <div className="truncate text-xs text-muted-foreground" title={adres}>
-              {adres}
-            </div>
+    cell: ({ row }) => (
+      <div className="flex min-w-[124px] flex-col">
+        <span
+          className={cn(
+            'font-medium',
+            isServiceOverdue(row.original) ? 'text-red-400' : 'text-foreground'
           )}
-        </div>
+        >
+          {formatDateCell(row.original.tarih)}
+        </span>
+        <span className="text-xs text-muted-foreground">{row.original.saat || '--:--'}</span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'tekneAdi',
+    header: 'Tekne / Lokasyon',
+    enableGrouping: true,
+    cell: ({ row }) => (
+      <div className="flex min-w-[220px] flex-col">
+        <span className="font-medium text-foreground">{row.original.tekneAdi}</span>
+        <span className="truncate text-xs text-muted-foreground" title={row.original.yer || row.original.adres}>
+          {row.original.yer || row.original.adres || '-'}
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'lokasyonGroup',
+    header: 'Lokasyon',
+    enableGrouping: true,
+    filterFn: multiSelectFilter,
+    cell: ({ row }) => {
+      const value = row.original.lokasyonGroup;
+      const label = value === 'YATMARIN' ? 'Yatmarin' : value === 'NETSEL' ? 'Netsel' : 'Dis Servis';
+
+      return (
+        <Badge variant="secondary" className="font-medium">
+          {label}
+        </Badge>
       );
     },
   },
   {
-    accessorKey: "servisAciklamasi",
-    header: "SERVİS AÇIKLAMASI",
+    accessorKey: 'servisAciklamasi',
+    header: 'Servis Aciklamasi',
+    cell: ({ row }) => (
+      <div className="max-w-[460px]">
+        <p className="line-clamp-2 text-sm text-foreground">{row.original.servisAciklamasi}</p>
+        <p className="text-xs text-muted-foreground">
+          {row.original.irtibatKisi || 'Irtibat yok'}
+          {row.original.telefon ? ` • ${row.original.telefon}` : ''}
+        </p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'personelSayisi',
+    header: 'Ekip',
     cell: ({ row }) => {
-      const text = String(row.getValue("servisAciklamasi") ?? "");
+      const personelCount = row.original.personelSayisi;
       return (
-        <div className="max-w-[360px] truncate" title={text}>
-          {text}
-        </div>
+        <Badge
+          variant="secondary"
+          className={cn(
+            'font-medium',
+            personelCount === 0
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+          )}
+        >
+          {personelCount === 0 ? 'Atanmamis' : `${personelCount} kisi`}
+        </Badge>
       );
     },
   },
   {
-    accessorKey: "durum",
-    header: "DURUM",
-    cell: ({ row }) => {
-      const status = normalizeServisDurumuForApp(String(row.getValue("durum") || ""));
-      const config = STATUS_CONFIG[status] || { label: status, color: "bg-zinc-500" };
-
-      return <Badge className={`${config.color} text-white border-0`}>{config.label}</Badge>;
-    },
+    accessorKey: 'durum',
+    header: 'Durum',
+    enableGrouping: true,
+    filterFn: multiSelectFilter,
+    cell: ({ row, table }) => <QuickStatusSelect row={row} table={table} />,
   },
   {
-    id: "actions",
-    cell: ({ row }) => {
-      const service = row.original;
+    accessorKey: 'tarihKey',
+    header: 'Tarih Anahtari',
+    filterFn: multiSelectFilter,
+    enableHiding: true,
+    cell: () => null,
+  },
+  {
+    id: 'actions',
+    enableSorting: false,
+    enableHiding: false,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as ServiceTableMeta | undefined;
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Menü</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.href = `/servisler/${service.id}/duzenle`;
-              }}
-            >
-              <Pencil className="mr-2 h-4 w-4" /> Düzenle
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.href = `/servisler/${service.id}?action=complete`;
-              }}
-            >
-              <CheckCircle className="mr-2 h-4 w-4 text-green-600" /> Tamamla
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div onClick={(event) => event.stopPropagation()}>
+          <DataTableRowActions row={row} onDeleted={meta?.onServiceDeleted} />
+        </div>
       );
     },
   },

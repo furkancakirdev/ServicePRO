@@ -1,28 +1,20 @@
-'use client';
+'use client'
 
-import { ServisDurumu, DURUM_CONFIG } from '@/types';
+import { ServisDurumu } from '@prisma/client'
+import { getStatusConfig } from '@/lib/config/status-config'
 
 interface StatusBadgeProps {
-    durum: ServisDurumu;
-    showIcon?: boolean;
+  status: ServisDurumu
+  showIcon?: boolean
 }
 
-export default function StatusBadge({ durum, showIcon = true }: StatusBadgeProps) {
-    const config = DURUM_CONFIG[durum];
+export function StatusBadge({ status, showIcon = true }: StatusBadgeProps) {
+  const config = getStatusConfig(status)
 
-    return (
-        <span
-            className="badge"
-            style={{
-                backgroundColor: config.bgColor,
-                color: config.color,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-            }}
-        >
-            {showIcon && <span>{config.icon}</span>}
-            <span>{config.label}</span>
-        </span>
-    );
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color} ${config.bgColor}`}>
+      {showIcon && <span>{config.icon}</span>}
+      {config.label}
+    </span>
+  )
 }

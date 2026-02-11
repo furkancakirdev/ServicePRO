@@ -1,18 +1,18 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 
 const actions = [
-    { href: '/planlama/yeni', icon: '➕', label: 'Yeni Servis Ekle', color: 'var(--color-primary)' },
-    { href: '/raporlar/whatsapp', icon: '📤', label: 'WhatsApp Rapor', color: 'var(--color-success)' },
-    { href: '/deger', icon: '⭐', label: 'Aylık Değerlendirme', color: 'var(--color-accent-gold)' },
+    { href: '/servisler/yeni', icon: 'â•', label: 'Yeni Servis Ekle', color: 'var(--color-primary)' },
+    { href: '/raporlar/whatsapp', icon: 'ğŸ“¤', label: 'WhatsApp Rapor', color: 'var(--color-success)' },
+    { href: '/deger', icon: 'â­', label: 'AylÄ±k DeÄŸerlendirme', color: 'var(--color-accent-gold)' },
 ];
 
 export default function QuickActions() {
     return (
         <div className="card">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>
-                Hızlı İşlemler
+                HÄ±zlÄ± Ä°ÅŸlemler
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -48,3 +48,4 @@ export default function QuickActions() {
         </div>
     );
 }
+

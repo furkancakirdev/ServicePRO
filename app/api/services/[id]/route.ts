@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { resolveBoatForService, toServisDurumu } from '@/lib/actions/service';
 
 type RouteContext = {
   params: {
@@ -10,10 +11,15 @@ type RouteContext = {
 
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
-    const service = await prisma.service.findUnique({
+    const service = await prisma.service.findFirst({
       where: { id: params.id, deletedAt: null },
       include: {
-        tekne: true,
+        tekne: {
+          select: {
+            id: true,
+            ad: true,
+          },
+        },
         ofisYetkili: {
           select: {
             id: true,
@@ -24,18 +30,15 @@ export async function GET(_request: Request, { params }: RouteContext) {
         },
         personeller: {
           include: {
-            personel: true,
+            personel: {
+              select: {
+                id: true,
+                ad: true,
+                unvan: true,
+              },
+            },
           },
           orderBy: [{ rol: 'desc' }],
-        },
-        bekleyenParcalar: {
-          orderBy: [{ tamamlandi: 'asc' }],
-        },
-        kapanisRaporu: true,
-        puanlar: {
-          include: {
-            personel: true,
-          },
         },
       },
     });
@@ -58,7 +61,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
     const body = await request.json();
 
-    const existing = await prisma.service.findUnique({
+    const existing = await prisma.service.findFirst({
       where: { id: params.id, deletedAt: null },
     });
 
@@ -66,9 +69,32 @@ export async function PUT(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: 'Servis bulunamadı' }, { status: 404 });
     }
 
+    const requestedDurum = body.durum !== undefined ? toServisDurumu(body.durum, existing.durum) : undefined;
+    if (requestedDurum === 'TAMAMLANDI' && existing.durum !== 'TAMAMLANDI') {
+      return NextResponse.json(
+        { error: 'Servisi tamamlamak için puanlama adımını kullanın.' },
+        { status: 409 }
+      );
+    }
+
+    const shouldUpdateBoat =
+      body.tekneId !== undefined || body.tekneAdi !== undefined || body.boatName !== undefined;
+
+    const resolvedBoat = shouldUpdateBoat
+      ? await resolveBoatForService(prisma, {
+          tekneId: body.tekneId,
+          tekneAdi: body.tekneAdi,
+          boatName: body.boatName,
+        })
+      : null;
+
     const service = await prisma.service.update({
       where: { id: params.id },
       data: {
+        ...(resolvedBoat && {
+          tekneId: resolvedBoat.tekneId,
+          tekneAdi: resolvedBoat.tekneAdi,
+        }),
         ...(body.tarih !== undefined && { tarih: body.tarih ? new Date(body.tarih) : null }),
         ...(body.saat !== undefined && { saat: body.saat }),
         ...(body.isTuru !== undefined && { isTuru: body.isTuru }),
@@ -77,9 +103,11 @@ export async function PUT(request: Request, { params }: RouteContext) {
         ...(body.servisAciklamasi !== undefined && { servisAciklamasi: body.servisAciklamasi }),
         ...(body.irtibatKisi !== undefined && { irtibatKisi: body.irtibatKisi }),
         ...(body.telefon !== undefined && { telefon: body.telefon }),
-        ...(body.durum !== undefined && { durum: body.durum }),
+        ...(requestedDurum !== undefined && { durum: requestedDurum }),
         ...(body.taseronNotlari !== undefined && { taseronNotlari: body.taseronNotlari }),
-        ...(body.tamamlanmaAt !== undefined && { tamamlanmaAt: body.tamamlanmaAt ? new Date(body.tamamlanmaAt) : null }),
+        ...(body.tamamlanmaAt !== undefined && {
+          tamamlanmaAt: body.tamamlanmaAt ? new Date(body.tamamlanmaAt) : null,
+        }),
       },
       include: {
         tekne: true,
@@ -118,7 +146,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     const body = await request.json();
 
-    const existing = await prisma.service.findUnique({
+    const existing = await prisma.service.findFirst({
       where: { id: params.id, deletedAt: null },
     });
 
@@ -126,9 +154,32 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: 'Servis bulunamadı' }, { status: 404 });
     }
 
+    const requestedDurum = body.durum !== undefined ? toServisDurumu(body.durum, existing.durum) : undefined;
+    if (requestedDurum === 'TAMAMLANDI' && existing.durum !== 'TAMAMLANDI') {
+      return NextResponse.json(
+        { error: 'Servisi tamamlamak için puanlama adımını kullanın.' },
+        { status: 409 }
+      );
+    }
+
+    const shouldUpdateBoat =
+      body.tekneId !== undefined || body.tekneAdi !== undefined || body.boatName !== undefined;
+
+    const resolvedBoat = shouldUpdateBoat
+      ? await resolveBoatForService(prisma, {
+          tekneId: body.tekneId,
+          tekneAdi: body.tekneAdi,
+          boatName: body.boatName,
+        })
+      : null;
+
     const service = await prisma.service.update({
       where: { id: params.id },
       data: {
+        ...(resolvedBoat && {
+          tekneId: resolvedBoat.tekneId,
+          tekneAdi: resolvedBoat.tekneAdi,
+        }),
         ...(body.tarih !== undefined && { tarih: body.tarih ? new Date(body.tarih) : null }),
         ...(body.saat !== undefined && { saat: body.saat }),
         ...(body.isTuru !== undefined && { isTuru: body.isTuru }),
@@ -137,9 +188,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         ...(body.servisAciklamasi !== undefined && { servisAciklamasi: body.servisAciklamasi }),
         ...(body.irtibatKisi !== undefined && { irtibatKisi: body.irtibatKisi }),
         ...(body.telefon !== undefined && { telefon: body.telefon }),
-        ...(body.durum !== undefined && { durum: body.durum }),
+        ...(requestedDurum !== undefined && { durum: requestedDurum }),
         ...(body.taseronNotlari !== undefined && { taseronNotlari: body.taseronNotlari }),
-        ...(body.tamamlanmaAt !== undefined && { tamamlanmaAt: body.tamamlanmaAt ? new Date(body.tamamlanmaAt) : null }),
+        ...(body.tamamlanmaAt !== undefined && {
+          tamamlanmaAt: body.tamamlanmaAt ? new Date(body.tamamlanmaAt) : null,
+        }),
       },
       include: {
         tekne: true,
@@ -176,10 +229,14 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     const auth = await requireAuth(request, ['ADMIN']);
     if (!auth.ok) return auth.response;
 
-    await prisma.service.update({
+    const deleted = await prisma.service.updateMany({
       where: { id: params.id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: 'Servis bulunamadı' }, { status: 404 });
+    }
 
     await prisma.auditLog.create({
       data: {
@@ -198,4 +255,3 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: 'Servis silinemedi' }, { status: 500 });
   }
 }
-

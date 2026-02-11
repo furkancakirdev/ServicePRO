@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -113,7 +113,7 @@ const navSections: NavSection[] = [
   {
     title: 'Genel',
     items: [
-      { href: '/', label: 'Dashboard', icon: 'Dashboard' },
+      { href: '/', label: 'Kontrol Merkezi', icon: 'Dashboard' },
     ],
   },
   {
@@ -148,19 +148,23 @@ const navSections: NavSection[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [user] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return null;
-        }
+  const [user, setUser] = useState<User | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        setUser(null);
       }
+    } else {
+      setUser(null);
     }
-    return null;
-  });
+    setIsHydrated(true);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === '/') {
@@ -199,9 +203,12 @@ export default function Sidebar() {
     }
   };
 
-  const visibleSections = navSections.filter(section => {
+  const visibleSections = navSections.filter((section) => {
     // Admin-only sections
-    if (section.title === 'Yönetim' && (normalizeRole(user?.rol ?? '') ?? user?.rol) !== 'ADMIN') {
+    if (
+      section.title === 'Yönetim' &&
+      (!isHydrated || (normalizeRole(user?.rol ?? '') ?? user?.rol) !== 'ADMIN')
+    ) {
       return false;
     }
     return true;

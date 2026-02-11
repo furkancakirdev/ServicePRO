@@ -146,9 +146,11 @@ model Service {
 
   @@index([tarih])
   @@index([durum])
+  @@index([durum, deletedAt])
   @@index([isTuru])
   @@index([tekneId])
   @@index([ofisYetkiliId])
+  @@index([deletedAt, tarih])
   @@index([yer]) // YENİ: Lokasyon bazlı filtreleme için
   @@map("servis")
 }

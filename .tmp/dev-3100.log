@@ -1,0 +1,25 @@
+
+> servicepro@1.0.0 dev
+> next dev --port 3100
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3100
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+ ✓ Compiled /middleware in 249ms (139 modules)
+ ○ Compiling /servisler ...
+ ✓ Compiled /servisler in 9.5s (1002 modules)
+ ✓ Compiled in 554ms (492 modules)
+prisma:query SELECT "public"."servis"."id", "public"."servis"."tarih", "public"."servis"."saat", "public"."servis"."tekne_adi", "public"."servis"."adres", "public"."servis"."yer", "public"."servis"."servis_aciklamasi", "public"."servis"."irtibat_kisi", "public"."servis"."telefon", "public"."servis"."durum"::text, "public"."servis"."is_turu"::text, "public"."servis"."created_at", COALESCE("aggr_selection_0_ServicePersonel"."_aggr_count_personeller", 0) AS "_aggr_count_personeller" FROM "public"."servis" LEFT JOIN (SELECT "public"."service_personel"."servis_id", COUNT(*) AS "_aggr_count_personeller" FROM "public"."service_personel" WHERE 1=1 GROUP BY "public"."service_personel"."servis_id") AS "aggr_selection_0_ServicePersonel" ON ("public"."servis"."id" = "aggr_selection_0_ServicePersonel"."servis_id") WHERE "public"."servis"."deleted_at" IS NULL ORDER BY "public"."servis"."tarih" DESC, "public"."servis"."created_at" DESC LIMIT $1 OFFSET $2
+ GET /servisler 200 in 12815ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /api/auth/me ...
+ ✓ Compiled /api/auth/me in 528ms (589 modules)
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 776ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 86ms
+^C^C

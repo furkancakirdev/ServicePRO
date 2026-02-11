@@ -64,7 +64,7 @@ export default function Header({
     if (title) return { title, subtitle };
 
     const titles: Record<string, { title: string; subtitle: string }> = {
-      '/': { title: 'Dashboard', subtitle: 'Genel bakış' },
+      '/': { title: 'Servis Kontrol Merkezi', subtitle: 'Anlık operasyon özeti' },
       '/servisler': { title: 'Servisler', subtitle: 'Tekne servis randevuları' },
       '/servisler/yeni': { title: 'Yeni Servis', subtitle: 'Randevu oluştur' },
       '/personel': { title: 'Personel', subtitle: 'Ekip yönetimi' },
@@ -210,4 +210,3 @@ export default function Header({
     </header>
   );
 }
-

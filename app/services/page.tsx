@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default function ServicesLegacyPage() {
+export default function ServicesRedirectPage() {
   redirect('/servisler');
 }
+

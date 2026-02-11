@@ -1,4 +1,6 @@
-﻿// ==================== SERVIS DURUMLARI ====================
+﻿import { DURUM_CONFIG as CENTRAL_DURUM_CONFIG } from '@/lib/config/status-config';
+
+// ==================== SERVIS DURUMLARI ====================
 export type ServisDurumu =
   | 'RANDEVU_VERILDI'
   | 'DEVAM_EDIYOR'
@@ -10,17 +12,8 @@ export type ServisDurumu =
   | 'IPTAL'
   | 'ERTELENDI';
 
-export const DURUM_CONFIG: Record<ServisDurumu, { label: string; color: string; bgColor: string; icon: string }> = {
-  RANDEVU_VERILDI: { label: 'Randevu Verildi', color: '#0891b2', bgColor: '#ecfeff', icon: 'RV' },
-  DEVAM_EDIYOR: { label: 'Devam Ediyor', color: '#16a34a', bgColor: '#f0fdf4', icon: 'DE' },
-  PARCA_BEKLIYOR: { label: 'Parça Bekliyor', color: '#ea580c', bgColor: '#fff7ed', icon: 'PB' },
-  MUSTERI_ONAY_BEKLIYOR: { label: 'Müşteri Onay Bekliyor', color: '#ca8a04', bgColor: '#fefce8', icon: 'MO' },
-  RAPOR_BEKLIYOR: { label: 'Rapor Bekliyor', color: '#2563eb', bgColor: '#eff6ff', icon: 'RB' },
-  KESIF_KONTROL: { label: 'Keşif-Kontrol', color: '#9333ea', bgColor: '#faf5ff', icon: 'KK' },
-  TAMAMLANDI: { label: 'Tamamlandı', color: '#57534e', bgColor: '#f5f5f4', icon: 'OK' },
-  IPTAL: { label: 'İptal', color: '#dc2626', bgColor: '#fef2f2', icon: 'IP' },
-  ERTELENDI: { label: 'Ertelendi', color: '#b45309', bgColor: '#fffbeb', icon: 'ER' },
-};
+export const DURUM_CONFIG =
+  CENTRAL_DURUM_CONFIG as unknown as Record<ServisDurumu, { label: string; color: string; bgColor: string; icon: string }>;
 
 // ==================== KONUM GRUPLARI ====================
 export type KonumGrubu = 'YATMARIN' | 'NETSEL' | 'DIS_SERVIS';
@@ -359,4 +352,5 @@ export const TUM_PERSONEL: Personnel[] = [
   { id: '16', ad: 'Ahmet Demir', rol: 'teknisyen', unvan: 'usta', aktif: true },
   { id: '17', ad: 'Mustafa Yıldız', rol: 'teknisyen', unvan: 'cirak', aktif: true },
 ];
+
 

@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { Prisma, ServisDurumu } from '@prisma/client';
 import { getLokasyonGroupFromFields, normalizeServisDurumuForDb } from '@/lib/domain-mappers';
 import { createUtcDayRange } from '@/lib/date-utils';
+import { resolveBoatForService, toServisDurumu } from '@/lib/actions/service';
 
 /**
  * GET /api/services - Get all services with optional filtering
@@ -197,20 +198,26 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
+    const resolvedBoat = await resolveBoatForService(prisma, {
+      tekneId: body.tekneId,
+      tekneAdi: body.tekneAdi,
+      boatName: body.boatName,
+    });
+
     // Create service
     const service = await prisma.service.create({
       data: {
         tarih: body.tarih ? new Date(body.tarih) : null,
         saat: body.saat,
         isTuru: body.isTuru || 'PAKET',
-        tekneId: body.tekneId,
-        tekneAdi: body.tekneAdi,
+        tekneId: resolvedBoat.tekneId,
+        tekneAdi: resolvedBoat.tekneAdi,
         adres: body.adres,
         yer: body.yer,
         servisAciklamasi: body.servisAciklamasi,
         irtibatKisi: body.irtibatKisi,
         telefon: body.telefon,
-        durum: body.durum || 'RANDEVU_VERILDI',
+        durum: toServisDurumu(body.durum, 'RANDEVU_VERILDI'),
         ofisYetkiliId: body.ofisYetkiliId,
         taseronNotlari: body.taseronNotlari,
       },

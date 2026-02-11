@@ -114,11 +114,35 @@ export function toDateOnlyISO(value: unknown): string | null {
 
 export function formatDateOnlyTR(value: unknown): string {
   const parts = parseDateOnlyParts(value);
-  if (!parts) return "Geçersiz tarih";
+  if (!parts) return "Gecersiz tarih";
 
   return `${parts.day.toString().padStart(2, "0")}.${parts.month
     .toString()
     .padStart(2, "0")}.${parts.year}`;
+}
+
+export function formatDateDdmmyyyShortMonth(value: unknown): string {
+  const date = parseDateOnlyToUtcDate(value);
+  if (!date) return "Gecersiz Tarih";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+export function isDateBeforeTodayUtc(value: unknown): boolean {
+  const date = parseDateOnlyToUtcDate(value);
+  if (!date) return false;
+
+  const now = new Date();
+  const todayUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0)
+  );
+
+  return date.getTime() < todayUtc.getTime();
 }
 
 export function createUtcDayRange(dateInput: string): { start: Date; end: Date } | null {
