@@ -120,7 +120,7 @@ const navSections: NavSection[] = [
     title: 'Operasyon',
     items: [
       { href: '/servisler', label: 'Servisler', icon: 'Calendar', badge: '5' },
-      { href: '/takvim', label: 'Takvim', icon: 'Calendar' },
+      { href: '/takvim', label: 'Operasyon Gorunumu', icon: 'Calendar' },
       { href: '/personel', label: 'Personel', icon: 'Users' },
     ],
   },

@@ -5,5 +5,5 @@ export default function ServisDetayRedirect({
 }: {
   params: { id: string };
 }) {
-  redirect(`/services/${params.id}/edit`);
+  redirect(`/servisler/${params.id}/duzenle`);
 }

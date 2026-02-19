@@ -4,12 +4,13 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build --no-lint",
+        "build": "prisma generate && next build --no-lint",
         "build:strict": "next build",
         "start": "next start",
         "lint": "next lint",
         "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
         "test": "node scripts/smoke-test.js",
+        "test:unit": "tsx scripts/test-date-normalization.ts && tsx scripts/test-sync-metadata.ts && tsx scripts/test-operations-overview.ts",
         "test:regression": "node scripts/regression-frontend-sync.js",
         "db:generate": "prisma generate",
         "db:push": "prisma db push",
@@ -22,8 +23,12 @@
         "sync:check": "node scripts/check-import.js",
         "sync:validate": "tsx scripts/sync-validate.ts --all --sampleLimit 2000",
         "sync:validate:strict": "tsx scripts/sync-validate.ts --all --sampleLimit 2000 --strict",
+        "sync:reset:sheet": "tsx scripts/sync-sheet-reset.ts --scope=sheet-only --strict",
         "sync:reconcile": "tsx scripts/sync-reconcile.ts",
-        "sync:reconcile:dry": "tsx scripts/sync-reconcile.ts --dry-run"
+        "test:e2e": "playwright test",
+        "sync:reconcile:dry": "tsx scripts/sync-reconcile.ts --dry-run",
+        "sync:pull:validated": "tsx scripts/sync-validated-pull.ts --strict",
+        "sync:pull:reconcile": "tsx scripts/sync-validated-pull.ts --strict --auto-reconcile"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"
@@ -68,6 +73,7 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
+        "@playwright/test": "^1.58.2",
         "@tailwindcss/forms": "^0.5.10",
         "@types/bcryptjs": "^2.4.6",
         "@types/jsonwebtoken": "^9.0.10",

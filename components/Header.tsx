@@ -67,6 +67,7 @@ export default function Header({
       '/': { title: 'Servis Kontrol Merkezi', subtitle: 'Anlık operasyon özeti' },
       '/servisler': { title: 'Servisler', subtitle: 'Tekne servis randevuları' },
       '/servisler/yeni': { title: 'Yeni Servis', subtitle: 'Randevu oluştur' },
+      '/takvim': { title: 'Operasyon Gorunumu', subtitle: 'Doluluk, planlama ve atama takibi' },
       '/personel': { title: 'Personel', subtitle: 'Ekip yönetimi' },
       '/puanlama': { title: 'Marlin Yıldızı', subtitle: 'Performans değerlendirme' },
       '/puanlama/gecmis': { title: 'Geçmiş', subtitle: 'Geçmiş değerlendirmeler' },
