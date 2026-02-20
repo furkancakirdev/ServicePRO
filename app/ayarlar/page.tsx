@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
+  Bell,
   Command,
   ExternalLink,
   Gauge,
@@ -640,7 +641,16 @@ export default function AyarlarPage() {
                 <Link href="/ayarlar/kullanicilar"><Users className="h-4 w-4" />Kullanıcı Yönetimi</Link>
               </Button>
               <Button asChild variant="secondary" className="gap-2">
+                <Link href="/ayarlar/durumlar"><Activity className="h-4 w-4" />Durum Yönetimi</Link>
+              </Button>
+              <Button asChild variant="secondary" className="gap-2">
                 <Link href="/ayarlar/konumlar"><MapPin className="h-4 w-4" />Konum Yönetimi</Link>
+              </Button>
+              <Button asChild variant="secondary" className="gap-2">
+                <Link href="/ayarlar/blokaj-nedenleri"><Shield className="h-4 w-4" />Blokaj Nedenleri</Link>
+              </Button>
+              <Button asChild variant="secondary" className="gap-2">
+                <Link href="/ayarlar/alerts"><Bell className="h-4 w-4" />Alert Rules</Link>
               </Button>
               <Button asChild variant="outline" className="gap-2">
                 <Link href="/servisler">Servis Listesine Git<ExternalLink className="h-4 w-4" /></Link>

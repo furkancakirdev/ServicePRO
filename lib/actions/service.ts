@@ -1,4 +1,4 @@
-import { PrismaClient, ServisDurumu } from '@prisma/client';
+import { Prisma, PrismaClient, ServisDurumu } from '@prisma/client';
 import { normalizeServisDurumuForDb } from '@/lib/domain-mappers';
 
 export interface ServiceBoatInput {
@@ -24,7 +24,7 @@ export function toServisDurumu(
 }
 
 export async function resolveBoatForService(
-  prisma: PrismaClient,
+  prisma: PrismaClient | Prisma.TransactionClient,
   input: ServiceBoatInput
 ): Promise<{ tekneId: string; tekneAdi: string }> {
   const requestedBoatName = normalizeBoatName(input.boatName ?? input.tekneAdi);
@@ -80,4 +80,3 @@ export async function resolveBoatForService(
     tekneAdi: requestedBoatName,
   };
 }
-

@@ -6,6 +6,9 @@ type CronBackupResponse = {
   silinenDosyaSayisi: number;
   kalanYedekSayisi: number;
   olusturulanYedekDosyasi: string;
+  retentionPolitikasi?: {
+    mod: 'daily_weekly' | 'legacy_days';
+  };
 };
 
 type BackupApiItem = {
@@ -32,6 +35,8 @@ test('Automated backup scheduling', async ({ page }) => {
   expect(cronBody.success).toBeTruthy();
   expect(cronBody.kalanYedekSayisi).toBe(1);
   expect(cronBody.silinenDosyaSayisi).toBeGreaterThanOrEqual(1);
+  expect(cronBody.olusturulanYedekDosyasi).toContain('servicepro-auto-');
+  expect(cronBody.retentionPolitikasi?.mod).toBe('legacy_days');
 
   const listResponse = await page.request.get('/api/backup');
   expect(listResponse.status()).toBe(200);

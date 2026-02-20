@@ -69,6 +69,8 @@ export interface Personnel {
   unvan: PersonelUnvan;
   aktif: boolean;
   girisYili?: number;
+  aktifIsSayisi?: number;
+  guncelDurum?: 'PASIF' | 'MUSAIT' | 'PLANLI' | 'YOGUN';
   aylikServisSayisi?: number;
   aylikOrtalamaPuan?: number;
   toplamRozetSayisi?: number;

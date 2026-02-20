@@ -129,14 +129,21 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const durum = searchParams.get('durum');
-    const durumListRaw = [...searchParams.getAll('durum')];
+    const status = searchParams.get('status');
+    const personelId = searchParams.get('personelId');
+    const durumListRaw = [...searchParams.getAll('durum'), ...searchParams.getAll('status')];
     if (durum && durum.includes(',')) {
       durumListRaw.push(...durum.split(',').map((x) => x.trim()));
     } else if (durum) {
       durumListRaw.push(durum);
     }
+    if (status && status.includes(',')) {
+      durumListRaw.push(...status.split(',').map((x) => x.trim()));
+    } else if (status) {
+      durumListRaw.push(status);
+    }
     const tekneId = searchParams.get('tekneId');
-    const arama = searchParams.get('arama');
+    const arama = searchParams.get('arama') || searchParams.get('q') || searchParams.get('search');
     const date = searchParams.get('date');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
@@ -163,6 +170,14 @@ export async function GET(request: Request) {
 
     if (tekneId) {
       where.tekneId = tekneId;
+    }
+
+    if (personelId) {
+      where.personeller = {
+        some: {
+          personelId,
+        },
+      };
     }
 
     if (arama) {

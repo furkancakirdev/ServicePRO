@@ -44,13 +44,40 @@ function joinCsv(values: string[] | undefined): string | null {
   return values.join(',');
 }
 
+function getStringParam(
+  params: QueryLike,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = params[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function getArrayParam(
+  params: QueryLike,
+  ...keys: string[]
+): string[] {
+  return splitCommaValues(
+    keys.flatMap((key) => toArray(params[key]))
+  );
+}
+
 export function parseServisFilterStateFromSearchParams(
   searchParams: QueryLike
 ): ServisFilterState {
-  const tekneAdi = (searchParams.search ?? searchParams.arama ?? '').toString().trim() || undefined;
-  const durum = splitCommaValues(toArray(searchParams.durum));
-  const konum = splitCommaValues(toArray(searchParams.adresGroup));
-  const tarih = splitCommaValues([...toArray(searchParams.tarih), ...toArray(searchParams.date)]);
+  const tekneAdi = getStringParam(searchParams, 'q', 'search', 'arama');
+  const durum = getArrayParam(searchParams, 'status', 'durum');
+  const konum = getArrayParam(searchParams, 'lokasyon', 'konum', 'adresGroup');
+  const tarih = getArrayParam(searchParams, 'tarih', 'date');
+  const teknisyen = getArrayParam(searchParams, 'technician', 'teknisyen');
+  const oncelik = getArrayParam(searchParams, 'priority', 'oncelik');
+  const blokaj = getArrayParam(searchParams, 'blockingReason', 'blokaj');
+  const dateFrom = getStringParam(searchParams, 'from', 'dateFrom');
+  const dateTo = getStringParam(searchParams, 'to', 'dateTo');
   const queue = parseQueueFilter(
     typeof searchParams.queue === 'string' ? searchParams.queue : undefined
   );
@@ -72,6 +99,11 @@ export function parseServisFilterStateFromSearchParams(
     durum,
     konum,
     tarih,
+    dateFrom,
+    dateTo,
+    teknisyen,
+    oncelik,
+    blokaj,
     queue,
     groupBy,
     datePreset,
@@ -84,16 +116,32 @@ export function serializeServisFilterStateToSearchParams(
   const normalized = normalizeServisFilterState(state);
   const params = new URLSearchParams();
 
-  if (normalized.tekneAdi) params.set('search', normalized.tekneAdi);
+  if (normalized.tekneAdi) {
+    params.set('q', normalized.tekneAdi);
+    // Keep legacy key for backward-compatible deep links and test flows.
+    params.set('search', normalized.tekneAdi);
+  }
 
   const durumCsv = joinCsv(normalized.durum);
-  if (durumCsv) params.set('durum', durumCsv);
+  if (durumCsv) params.set('status', durumCsv);
 
   const konumCsv = joinCsv(normalized.konum);
-  if (konumCsv) params.set('adresGroup', konumCsv);
+  if (konumCsv) params.set('lokasyon', konumCsv);
 
   const tarihCsv = joinCsv(normalized.tarih);
   if (tarihCsv) params.set('tarih', tarihCsv);
+
+  if (normalized.dateFrom) params.set('from', normalized.dateFrom);
+  if (normalized.dateTo) params.set('to', normalized.dateTo);
+
+  const technicianCsv = joinCsv(normalized.teknisyen);
+  if (technicianCsv) params.set('technician', technicianCsv);
+
+  const priorityCsv = joinCsv(normalized.oncelik);
+  if (priorityCsv) params.set('priority', priorityCsv);
+
+  const blockingCsv = joinCsv(normalized.blokaj);
+  if (blockingCsv) params.set('blockingReason', blockingCsv);
 
   if (normalized.queue) params.set('queue', normalized.queue);
   if (normalized.groupBy) params.set('groupBy', normalized.groupBy);
@@ -112,6 +160,30 @@ export function buildServisUrlFromFilterState(
 }
 
 export function hasServisFilterParams(params: URLSearchParams): boolean {
-  const keys = ['search', 'arama', 'durum', 'adresGroup', 'tarih', 'date', 'queue', 'groupBy', 'preset'];
+  const keys = [
+    'q',
+    'search',
+    'arama',
+    'status',
+    'durum',
+    'lokasyon',
+    'konum',
+    'adresGroup',
+    'tarih',
+    'date',
+    'from',
+    'to',
+    'dateFrom',
+    'dateTo',
+    'technician',
+    'teknisyen',
+    'priority',
+    'oncelik',
+    'blockingReason',
+    'blokaj',
+    'queue',
+    'groupBy',
+    'preset',
+  ];
   return keys.some((key) => params.has(key));
 }

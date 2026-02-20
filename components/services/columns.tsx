@@ -1,8 +1,19 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { Column, ColumnDef, FilterFn, Row, Table } from '@tanstack/react-table';
-import { ArrowUpDown, CalendarClock, CheckCircle2, FileText, MessageCircleCode, PauseCircle, Package, Search, UserRoundCheck, Wrench, XCircle, type LucideIcon } from 'lucide-react';
+import {
+  ArrowUpDown,
+  CalendarClock,
+  CheckCircle2,
+  PauseCircle,
+  Search,
+  UserRoundCheck,
+  Wrench,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,20 +24,24 @@ import {
 import { InlineColumnFilter } from '@/components/servisler/filters/InlineColumnFilter';
 import { MultiSelectFilter } from '@/components/servisler/filters/MultiSelectFilter';
 import { TextFilter } from '@/components/servisler/filters/TextFilter';
-import { formatDateDdmmyyyShortMonth, isDateBeforeTodayUtc, parseDateOnlyToUtcDate } from '@/lib/date-utils';
+import { formatDateDdmmyyyShortMonth, isDateBeforeTodayUtc } from '@/lib/date-utils';
 import { getStatusConfig } from '@/lib/config/status-config';
 import { cn } from '@/lib/utils';
 import { normalizeServisDurumuForApp } from '@/lib/domain-mappers';
-import { ServiceGridRow, ServiceTableMeta, STATUS_FILTER_OPTIONS } from './types';
-import { LOKASYON_FILTER_OPTIONS } from './types';
+import {
+  PRIORITY_FILTER_OPTIONS,
+  ServiceLocationOption,
+  ServiceGridRow,
+  ServiceStatusOption,
+  ServiceTableMeta,
+  STATUS_FILTER_OPTIONS,
+} from './types';
 
 const STATUS_ICON_MAP: Record<string, LucideIcon> = {
   RANDEVU_VERILDI: CalendarClock,
   DEVAM_EDIYOR: Wrench,
-  PARCA_BEKLIYOR: Package,
+  PARCA_BEKLIYOR: Search,
   MUSTERI_ONAY_BEKLIYOR: UserRoundCheck,
-  RAPOR_BEKLIYOR: FileText,
-  KESIF_KONTROL: Search,
   TAMAMLANDI: CheckCircle2,
   IPTAL: XCircle,
   ERTELENDI: PauseCircle,
@@ -38,26 +53,75 @@ const multiSelectFilter: FilterFn<ServiceGridRow> = (row, columnId, filterValue)
   return selected.includes(String(row.getValue(columnId) ?? ''));
 };
 
-function formatDateCell(value: string | null): string {
-  if (!value) return '-';
-  return formatDateDdmmyyyShortMonth(value);
-}
-
 function getStatusIcon(status: string): LucideIcon {
   const normalized = normalizeServisDurumuForApp(status);
   return STATUS_ICON_MAP[normalized] ?? CalendarClock;
 }
 
-function getDueDate(service: ServiceGridRow): string | null {
-  return service.tahminiBitisTarihi ?? service.tarih;
+function tekilSecenekleriBirlestir<T extends { value: string; label: string }>(
+  ilk: T[],
+  ikinci: T[]
+): T[] {
+  const gorulen = new Set<string>();
+  const sonuc: T[] = [];
+
+  for (const secenek of [...ilk, ...ikinci]) {
+    const key = secenek.value.trim();
+    if (!key || gorulen.has(key)) continue;
+    gorulen.add(key);
+    sonuc.push({ ...secenek, value: key });
+  }
+
+  return sonuc;
+}
+
+function durumSecenekleriniGetir(table: Table<ServiceGridRow>): ServiceStatusOption[] {
+  const meta = table.options.meta as ServiceTableMeta | undefined;
+  const metaSecenekleri = (meta?.statusOptions ?? []).filter((secenek) => secenek.value.trim().length > 0);
+  if (metaSecenekleri.length > 0) return metaSecenekleri;
+
+  const faceted = table.getColumn('durum')?.getFacetedUniqueValues();
+  if (!faceted || faceted.size === 0) return STATUS_FILTER_OPTIONS;
+
+  const dinamikSecenekler = Array.from(faceted.keys())
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .map((value) => ({
+      value,
+      label: getStatusConfig(value).label,
+    }));
+
+  return tekilSecenekleriBirlestir(dinamikSecenekler, STATUS_FILTER_OPTIONS);
+}
+
+function lokasyonSecenekleriniGetir(table: Table<ServiceGridRow>): ServiceLocationOption[] {
+  const meta = table.options.meta as ServiceTableMeta | undefined;
+  const metaSecenekleri = (meta?.locationOptions ?? []).filter(
+    (secenek) => secenek.value.trim().length > 0
+  );
+  const faceted = table.getColumn('yer')?.getFacetedUniqueValues();
+  const dinamikSecenekler: ServiceLocationOption[] = faceted
+    ? Array.from(faceted.keys())
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+        .map((value) => ({
+          value,
+          label: metaSecenekleri.find((secenek) => secenek.value === value)?.label ?? value,
+        }))
+    : [];
+
+  return tekilSecenekleriBirlestir(metaSecenekleri, dinamikSecenekler);
 }
 
 function isServiceOverdue(service: ServiceGridRow): boolean {
-  return (
-    isDateBeforeTodayUtc(getDueDate(service)) &&
-    service.durum !== 'TAMAMLANDI' &&
-    service.durum !== 'IPTAL'
-  );
+  const dueDate = service.tahminiBitisTarihi ?? service.tarih;
+  return isDateBeforeTodayUtc(dueDate) && service.durum !== 'TAMAMLANDI' && service.durum !== 'IPTAL';
+}
+
+function getPriorityStyle(priority: ServiceGridRow['oncelik']): string {
+  if (priority === 'YUKSEK') return 'bg-rose-500/15 text-rose-600 border-rose-300/60';
+  if (priority === 'ORTA') return 'bg-amber-500/15 text-amber-700 border-amber-300/60';
+  return 'bg-emerald-500/15 text-emerald-700 border-emerald-300/60';
 }
 
 const QuickStatusSelect = React.memo(function QuickStatusSelect({
@@ -73,6 +137,7 @@ const QuickStatusSelect = React.memo(function QuickStatusSelect({
   const statusConfig = getStatusConfig(currentStatus);
   const CurrentIcon = getStatusIcon(currentStatus);
   const isPending = meta?.isServiceStatusUpdating(service.id) ?? false;
+  const statusOptions = durumSecenekleriniGetir(table);
 
   const handleStatusChange = (nextStatus: string) => {
     if (!meta) return;
@@ -85,7 +150,7 @@ const QuickStatusSelect = React.memo(function QuickStatusSelect({
       <Select value={currentStatus} onValueChange={handleStatusChange} disabled={!meta || isPending}>
         <SelectTrigger
           className={cn(
-            'h-11 min-w-[170px] border-0 px-2 text-xs font-medium shadow-none',
+            'h-10 min-w-[168px] border-0 px-2 text-xs font-medium shadow-none',
             statusConfig.bgColor,
             statusConfig.color
           )}
@@ -101,7 +166,7 @@ const QuickStatusSelect = React.memo(function QuickStatusSelect({
           className="border-border bg-popover text-popover-foreground"
           onClick={(event) => event.stopPropagation()}
         >
-          {STATUS_FILTER_OPTIONS.map((statusOption) => {
+          {statusOptions.map((statusOption) => {
             const OptionIcon = getStatusIcon(statusOption.value);
             return (
               <SelectItem key={statusOption.value} value={statusOption.value}>
@@ -144,165 +209,52 @@ function SortableHeader({
 
 export const serviceColumns: ColumnDef<ServiceGridRow>[] = [
   {
-    accessorKey: 'tarih',
-    header: ({ column, table }) => {
-      const filterColumn = table.getColumn('tarihKey');
-      const selected = new Set((filterColumn?.getFilterValue() as string[] | undefined) ?? []);
-      const options = Array.from(filterColumn?.getFacetedUniqueValues().entries() ?? [])
-        .map(([value, count]) => {
-          const raw = String(value);
-          const parsed = parseDateOnlyToUtcDate(raw);
-          return {
-            value: raw,
-            label: parsed ? formatDateDdmmyyyShortMonth(parsed.toISOString().slice(0, 10)) : raw,
-            count: Number(count),
-          };
-        })
-        .sort((a, b) => b.value.localeCompare(a.value));
-
-      return (
-        <SortableHeader
-          title="Tarih"
-          column={column}
-          withFilter={
-            <InlineColumnFilter
-              baslik="Filtre"
-              aktifFiltreSayisi={selected.size}
-              dataTestId="inline-filter-tarih"
-            >
-              <MultiSelectFilter
-                secenekler={options}
-                seciliDegerler={Array.from(selected)}
-                dataTestId="inline-filter-tarih"
-                onDegerDegisti={(degerler) =>
-                  filterColumn?.setFilterValue(degerler.length > 0 ? degerler : undefined)
-                }
-              />
-            </InlineColumnFilter>
-          }
-        />
-      );
-    },
-    cell: ({ row }) => (
-      <span className={cn(isServiceOverdue(row.original) ? 'font-medium text-destructive' : 'font-medium')}>
-        {formatDateCell(row.original.tarih)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'saat',
-    header: ({ column }) => <SortableHeader title="Saat" column={column} />, 
-    cell: ({ row }) => <span>{row.original.saat || '--:--'}</span>,
-  },
-  {
     accessorKey: 'tekneAdi',
     header: ({ column, table }) => {
       const tekneColumn = table.getColumn('tekneAdi');
-      const deger = ((tekneColumn?.getFilterValue() as string | undefined) ?? '').trim();
+      const value = ((tekneColumn?.getFilterValue() as string | undefined) ?? '').trim();
 
       return (
         <SortableHeader
-          title="Tekne Adi"
+          title="Tekne"
           column={column}
           withFilter={
             <InlineColumnFilter
               baslik="Filtre"
-              aktifFiltreSayisi={deger ? 1 : 0}
+              aktifFiltreSayisi={value ? 1 : 0}
               dataTestId="inline-filter-tekneAdi"
             >
               <TextFilter
-                deger={deger}
-                placeholder="Tekne adı ara..."
+                deger={value}
+                placeholder="Tekne ara..."
                 dataTestId="inline-filter-tekneAdi"
-                onDegerDegisti={(yeniDeger) => tekneColumn?.setFilterValue(yeniDeger || undefined)}
+                onDegerDegisti={(nextValue) => tekneColumn?.setFilterValue(nextValue || undefined)}
               />
             </InlineColumnFilter>
           }
         />
       );
     },
-    enableGrouping: true,
     cell: ({ row }) => <span className="font-medium">{row.original.tekneAdi}</span>,
   },
   {
-    accessorKey: 'adres',
-    header: ({ column, table }) => {
-      const lokasyonColumn = table.getColumn('lokasyonGroup');
-      const seciliLokasyonlar = new Set((lokasyonColumn?.getFilterValue() as string[] | undefined) ?? []);
-      const faceted = lokasyonColumn?.getFacetedUniqueValues();
-      const lokasyonSecenekleri = LOKASYON_FILTER_OPTIONS.map((secenek) => ({
-        value: secenek.value,
-        label: secenek.label,
-        count: Number(faceted?.get(secenek.value) ?? 0),
-      }));
-
-      return (
-        <SortableHeader
-          title="Adres"
-          column={column}
-          withFilter={
-            <InlineColumnFilter
-              baslik="Lokasyon"
-              aktifFiltreSayisi={seciliLokasyonlar.size}
-              dataTestId="inline-filter-lokasyon"
-            >
-              <MultiSelectFilter
-                secenekler={lokasyonSecenekleri}
-                seciliDegerler={Array.from(seciliLokasyonlar)}
-                dataTestId="inline-filter-lokasyon"
-                onDegerDegisti={(degerler) =>
-                  lokasyonColumn?.setFilterValue(degerler.length > 0 ? degerler : undefined)
-                }
-              />
-            </InlineColumnFilter>
-          }
-        />
-      );
-    },
-    cell: ({ row }) => <span>{row.original.adres || '-'}</span>,
-  },
-  {
-    accessorKey: 'lokasyonGroup',
-    header: 'Lokasyon Grup',
-    filterFn: multiSelectFilter,
-    enableHiding: true,
-    enableGrouping: true,
-    cell: () => null,
-  },
-  {
     accessorKey: 'servisAciklamasi',
-    header: ({ column }) => <SortableHeader title="Servis Aciklamasi" column={column} />,
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as ServiceTableMeta | undefined;
-      return (
-        <div className="flex items-center gap-2">
-          <p className="max-w-[500px] truncate" title={row.original.servisAciklamasi}>
-            {row.original.servisAciklamasi}
-          </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11 shrink-0"
-            title="Satiri WhatsApp mesaji olarak kopyala"
-            onClick={(event) => {
-              event.stopPropagation();
-              meta?.onCopyRowWhatsapp?.(row.original);
-            }}
-          >
-            <MessageCircleCode className="h-4 w-4" />
-            <span className="sr-only">WhatsApp satir kopyala</span>
-          </Button>
-        </div>
-      );
-    },
+    header: ({ column }) => <SortableHeader title="Baslik/Ozet" column={column} />,
+    cell: ({ row }) => (
+      <div className="max-w-[440px]">
+        <p className="truncate font-medium text-foreground" title={row.original.servisAciklamasi}>
+          {row.original.servisAciklamasi}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{row.original.adres || '-'}</p>
+      </div>
+    ),
   },
   {
     accessorKey: 'durum',
-    header: ({ column }) => {
+    header: ({ column, table }) => {
       const selected = new Set((column.getFilterValue() as string[] | undefined) ?? []);
       const faceted = column.getFacetedUniqueValues();
-      const options = STATUS_FILTER_OPTIONS.map((status) => ({
+      const options = durumSecenekleriniGetir(table).map((status) => ({
         value: status.value,
         label: status.label,
         count: Number(faceted?.get(status.value) ?? 0),
@@ -322,8 +274,8 @@ export const serviceColumns: ColumnDef<ServiceGridRow>[] = [
                 secenekler={options}
                 seciliDegerler={Array.from(selected)}
                 dataTestId="inline-filter-durum"
-                onDegerDegisti={(degerler) =>
-                  column.setFilterValue(degerler.length > 0 ? degerler : undefined)
+                onDegerDegisti={(values) =>
+                  column.setFilterValue(values.length > 0 ? values : undefined)
                 }
               />
             </InlineColumnFilter>
@@ -335,18 +287,106 @@ export const serviceColumns: ColumnDef<ServiceGridRow>[] = [
     cell: ({ row, table }) => <QuickStatusSelect row={row} table={table} />,
   },
   {
-    accessorKey: 'irtibatKisi',
-    header: ({ column }) => <SortableHeader title="Irtibat Kisi" column={column} />,
-    cell: ({ row }) => <span>{row.original.irtibatKisi || '-'}</span>,
+    accessorKey: 'oncelik',
+    header: ({ column }) => <SortableHeader title="Oncelik" column={column} />,
+    filterFn: multiSelectFilter,
+    cell: ({ row }) => (
+      <Badge className={cn('border text-xs', getPriorityStyle(row.original.oncelik))}>
+        {PRIORITY_FILTER_OPTIONS.find((item) => item.value === row.original.oncelik)?.label ?? row.original.oncelik}
+      </Badge>
+    ),
   },
   {
-    accessorKey: 'telefon',
-    header: ({ column }) => <SortableHeader title="Telefon" column={column} />,
-    cell: ({ row }) => <span>{row.original.telefon || '-'}</span>,
+    accessorKey: 'yer',
+    header: ({ column, table }) => {
+      const lokasyonColumn = table.getColumn('yer');
+      const selected = new Set((lokasyonColumn?.getFilterValue() as string[] | undefined) ?? []);
+      const faceted = lokasyonColumn?.getFacetedUniqueValues();
+      const options = lokasyonSecenekleriniGetir(table).map((option) => ({
+        value: option.value,
+        label: option.label,
+        count: Number(faceted?.get(option.value) ?? 0),
+      }));
+
+      return (
+        <SortableHeader
+          title="Lokasyon"
+          column={column}
+          withFilter={
+            <InlineColumnFilter
+              baslik="Lokasyon"
+              aktifFiltreSayisi={selected.size}
+              dataTestId="inline-filter-lokasyon"
+            >
+              <MultiSelectFilter
+                secenekler={options}
+                seciliDegerler={Array.from(selected)}
+                dataTestId="inline-filter-lokasyon"
+                onDegerDegisti={(values) =>
+                  lokasyonColumn?.setFilterValue(values.length > 0 ? values : undefined)
+                }
+              />
+            </InlineColumnFilter>
+          }
+        />
+      );
+    },
+    filterFn: multiSelectFilter,
+    cell: ({ row }) => (
+      <div>
+        <p className="text-sm text-foreground">{row.original.yer || '-'}</p>
+        <p className="text-xs text-muted-foreground">{row.original.lokasyonGroup}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'atananTeknisyenler',
+    header: ({ column }) => <SortableHeader title="Atanan" column={column} />,
+    cell: ({ row }) => {
+      const names = row.original.atananTeknisyenler;
+      if (names.length === 0) {
+        return <span className="text-sm text-muted-foreground">Atama bekliyor</span>;
+      }
+      if (names.length <= 2) {
+        return <span className="text-sm">{names.join(', ')}</span>;
+      }
+      return (
+        <span className="text-sm">
+          {names.slice(0, 2).join(', ')} +{names.length - 2}
+        </span>
+      );
+    },
+  },
+  {
+    accessorKey: 'tarih',
+    header: ({ column }) => <SortableHeader title="Tarih" column={column} />,
+    cell: ({ row }) => {
+      const dateText = row.original.tarih ? formatDateDdmmyyyShortMonth(row.original.tarih) : 'Tarihsiz';
+      return (
+        <div className={cn('text-sm', isServiceOverdue(row.original) ? 'font-semibold text-destructive' : '')}>
+          <div>{dateText}</div>
+          <div className="text-xs text-muted-foreground">{row.original.saat || '--:--'}</div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'lokasyonGroup',
+    header: 'Lokasyon Grup',
+    filterFn: multiSelectFilter,
+    enableHiding: true,
+    cell: () => null,
   },
   {
     accessorKey: 'tarihKey',
     header: 'Tarih Anahtari',
+    filterFn: multiSelectFilter,
+    enableHiding: true,
+    cell: () => null,
+  },
+  {
+    accessorKey: 'blokajNedeni',
+    header: 'Blokaj Nedeni',
     filterFn: multiSelectFilter,
     enableHiding: true,
     cell: () => null,

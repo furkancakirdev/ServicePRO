@@ -60,7 +60,7 @@ export function UiRedesignProvider({ children }: { children: React.ReactNode }) 
   const { user } = useAuth();
   const [hydrated, setHydrated] = useState(false);
   const [hintsVisible, setHintsVisibleState] = useState(true);
-  const [densityMode, setDensityModeState] = useState<UiDensityMode>('comfortable');
+  const [densityMode, setDensityModeState] = useState<UiDensityMode>('compact');
   const [uiPreferences, setUiPreferences] = useState<UiPreferences>(DEFAULT_UI_PREFERENCES);
 
   useEffect(() => {

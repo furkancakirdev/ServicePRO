@@ -26,6 +26,14 @@ type VarsayilanUnvan = {
   sirasi: number;
 };
 
+type VarsayilanBlokajNedeni = {
+  key: string;
+  label: string;
+  description: string;
+  durumKey: string;
+  sirasi: number;
+};
+
 const VARSAYILAN_DURUMLAR: VarsayilanDurum[] = [
   {
     key: 'RANDEVU_VERILDI',
@@ -132,6 +140,37 @@ const VARSAYILAN_UNVANLAR: VarsayilanUnvan[] = [
   { key: 'OFIS', label: 'Ofis', puanCarpani: 1.0, sirasi: 4 },
 ];
 
+const VARSAYILAN_BLOKAJ_NEDENLERI: VarsayilanBlokajNedeni[] = [
+  {
+    key: 'PARCA_BEKLIYOR',
+    label: 'Parca Bekliyor',
+    description: 'Parca tedariki tamamlanmadan is ilerleyemez.',
+    durumKey: 'PARCA_BEKLIYOR',
+    sirasi: 1,
+  },
+  {
+    key: 'ONAY_BEKLIYOR',
+    label: 'Onay Bekliyor',
+    description: 'Musteri onayi beklenen adim.',
+    durumKey: 'MUSTERI_ONAY_BEKLIYOR',
+    sirasi: 2,
+  },
+  {
+    key: 'RAPOR_BEKLIYOR',
+    label: 'Rapor Bekliyor',
+    description: 'Kapanis raporu tamamlanmadan is ilerleyemez.',
+    durumKey: 'RAPOR_BEKLIYOR',
+    sirasi: 3,
+  },
+  {
+    key: 'SAHA_ERTELEME',
+    label: 'Saha Erteleme',
+    description: 'Saha kosullari nedeniyle servis ertelendi.',
+    durumKey: 'ERTELENDI',
+    sirasi: 4,
+  },
+];
+
 function anahtarNormalizeEt(deger: string): string {
   return deger
     .replace(/[İI]/g, 'I')
@@ -159,6 +198,7 @@ function servisDurumAnahtariGetir(hamDurum: string): string {
 export type DinamikMigrationOzeti = {
   durumUpsertSayisi: number;
   konumUpsertSayisi: number;
+  blokajNedeniUpsertSayisi: number;
   unvanUpsertSayisi: number;
   servisDurumEslestirilen: number;
   servisKonumEslestirilen: number;
@@ -241,6 +281,27 @@ export async function migrateHardcodedToDynamic(): Promise<DinamikMigrationOzeti
       });
 
       unvanIdHaritasi.set(anahtarNormalizeEt(kayit.key), kayit.id);
+    }
+
+    for (const blokajNedeni of VARSAYILAN_BLOKAJ_NEDENLERI) {
+      await tx.blokajNedeni.upsert({
+        where: { key: blokajNedeni.key },
+        update: {
+          label: blokajNedeni.label,
+          description: blokajNedeni.description,
+          durumKey: blokajNedeni.durumKey,
+          sirasi: blokajNedeni.sirasi,
+          aktif: true,
+        },
+        create: {
+          key: blokajNedeni.key,
+          label: blokajNedeni.label,
+          description: blokajNedeni.description,
+          durumKey: blokajNedeni.durumKey,
+          sirasi: blokajNedeni.sirasi,
+          aktif: true,
+        },
+      });
     }
 
     const servisler = await tx.service.findMany({
@@ -350,6 +411,7 @@ export async function migrateHardcodedToDynamic(): Promise<DinamikMigrationOzeti
     return {
       durumUpsertSayisi: VARSAYILAN_DURUMLAR.length,
       konumUpsertSayisi: VARSAYILAN_KONUMLAR.length,
+      blokajNedeniUpsertSayisi: VARSAYILAN_BLOKAJ_NEDENLERI.length,
       unvanUpsertSayisi: VARSAYILAN_UNVANLAR.length,
       servisDurumEslestirilen,
       servisKonumEslestirilen,

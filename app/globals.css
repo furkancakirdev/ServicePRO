@@ -384,6 +384,7 @@ body {
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
   margin-bottom: var(--space-xs);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   text-decoration: none;
@@ -398,10 +399,10 @@ body {
 }
 
 .sidebar-link.active {
+  border-left: 1px solid var(--sidebar-active-border);
+  border-color: color-mix(in oklab, var(--sidebar-active-border) 35%, transparent 65%);
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-fg);
-  border-left: 3px solid var(--sidebar-active-border);
-  margin-left: -3px;
 }
 
 .sidebar-icon {
@@ -1292,9 +1293,8 @@ body.ui-redesign .hero-panel {
 body.ui-redesign .surface-panel,
 body.ui-redesign .sp-card {
   border-color: color-mix(in oklab, var(--color-border) 76%, white 24%);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(255, 255, 255, 0) 100%),
-    var(--color-surface);
+  background: var(--color-surface);
+  box-shadow: 0 8px 18px rgba(5, 14, 28, 0.18);
 }
 
 body.ui-redesign .page-header {
@@ -1342,12 +1342,21 @@ body.ui-redesign .sp-table-cell {
 
 body.ui-redesign.ui-density-compact .table td,
 body.ui-redesign.ui-density-compact .sp-table-cell {
-  padding: 9px 12px;
+  padding: 8px 10px;
 }
 
 body.ui-redesign.ui-density-compact .table th,
 body.ui-redesign.ui-density-compact .sp-table-head {
-  padding: 10px 12px;
+  padding: 8px 10px;
+}
+
+body.ui-redesign.ui-density-compact .chip {
+  padding: 0.26rem 0.55rem;
+  font-size: 0.7rem;
+}
+
+body.ui-redesign.ui-density-compact .btn {
+  min-height: 34px;
 }
 
 body.ui-no-motion *,

@@ -7,20 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const auth = await requireAuth(request, ['ADMIN', 'YETKILI']);
+    const auth = await requireAuth(request, ['ADMIN']);
     if (!auth.ok) return auth.response;
 
     const settings = readSettings();
-    if (
-      auth.payload.role !== 'ADMIN' &&
-      settings.access?.yetkiliCanAccessSettings === false
-    ) {
-      return NextResponse.json(
-        { error: 'Ayarlar sayfasına erişim yetkiniz kapatıldı' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(settings);
   } catch {
     return NextResponse.json({ error: 'Ayarlar getirilemedi' }, { status: 500 });

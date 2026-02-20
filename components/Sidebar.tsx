@@ -63,6 +63,17 @@ const Icons = {
       <polyline points="10 9 9 9 8 9" />
     </svg>
   ),
+  Phone: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  Bell: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  ),
   Settings: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
@@ -106,7 +117,8 @@ interface NavSection {
 interface User {
   id: string;
   ad: string;
-  rol: 'ADMIN' | 'YETKILI' | 'TEKNISYEN' | 'MUSTERI';
+  rol?: 'ADMIN' | 'YETKILI' | 'TEKNISYEN' | 'MUSTERI';
+  role?: 'ADMIN' | 'YETKILI' | 'TEKNISYEN' | 'MUSTERI';
   email?: string;
 }
 
@@ -118,7 +130,16 @@ const navSections: NavSection[] = [
   {
     title: 'Servis',
     items: [
-      { href: '/servisler', label: 'Servisler', icon: 'Calendar' },
+      { href: '/jobs', label: 'Jobs', icon: 'Document' },
+      { href: '/servisler', label: 'Servisler', icon: 'Document' },
+      { href: '/dispatch', label: 'Dispatch', icon: 'Calendar' },
+      { href: '/calls', label: 'Calls', icon: 'Phone' },
+      { href: '/leads', label: 'Leads', icon: 'Phone' },
+      { href: '/pricebook', label: 'Pricebook', icon: 'Document' },
+      { href: '/templates/jobs', label: 'Templates', icon: 'Document' },
+      { href: '/notifications', label: 'Notifications', icon: 'Bell' },
+      { href: '/tekneler', label: 'Tekneler', icon: 'Dashboard' },
+      { href: '/takvim', label: 'Takvim', icon: 'Calendar' },
       { href: '/personel', label: 'Ekip', icon: 'Users' },
     ],
   },
@@ -138,7 +159,10 @@ const navSections: NavSection[] = [
   },
   {
     title: 'Yönetim',
-    items: [{ href: '/ayarlar', label: 'Ayarlar', icon: 'Settings', minimumRole: 'YETKILI' }],
+    items: [
+      { href: '/ayarlar', label: 'Ayarlar', icon: 'Settings', minimumRole: 'ADMIN' },
+      { href: '/ayarlar/alerts', label: 'Alert Rules', icon: 'Bell', minimumRole: 'ADMIN' },
+    ],
   },
 ];
 
@@ -162,7 +186,7 @@ export default function Sidebar() {
     setIsHydrated(true);
   }, []);
 
-  const normalizedUserRole = normalizeRole(user?.rol ?? '');
+  const normalizedUserRole = normalizeRole(user?.rol ?? user?.role ?? '');
 
   const visibleSections = useMemo(
     () =>
@@ -258,13 +282,13 @@ export default function Sidebar() {
               <button className="sidebar-user-trigger" data-testid="sidebar-user-menu-trigger">
                 <div
                   className="sidebar-user-avatar"
-                  style={{ backgroundColor: getRoleColor(user.rol) }}
+                  style={{ backgroundColor: getRoleColor(user.rol ?? user.role ?? '') }}
                 >
                   {user.ad.charAt(0).toUpperCase()}
                 </div>
                 <div className="sidebar-user-info">
                   <span className="sidebar-user-name">{user.ad}</span>
-                  <span className="sidebar-user-role">{getRoleLabel(user.rol)}</span>
+                  <span className="sidebar-user-role">{getRoleLabel(user.rol ?? user.role ?? '')}</span>
                 </div>
                 <Icons.ChevronDown />
               </button>
@@ -281,11 +305,13 @@ export default function Sidebar() {
                   <span>Profil</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/ayarlar">
-                  <span>Ayarlar</span>
-                </Link>
-              </DropdownMenuItem>
+              {normalizedUserRole === 'ADMIN' ? (
+                <DropdownMenuItem>
+                  <Link href="/ayarlar">
+                    <span>Ayarlar</span>
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <Icons.Logout />

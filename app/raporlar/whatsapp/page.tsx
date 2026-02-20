@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Service } from '@/types';
 import {
   WhatsAppTemplateVariant,
@@ -9,16 +10,96 @@ import {
   selectServicesByTemplate,
 } from '@/lib/report-generator';
 
+type ServiceWithAssignments = Service & {
+  personeller?: Array<{
+    personelId: string;
+    rol: 'SORUMLU' | 'DESTEK';
+    personel?: {
+      ad?: string | null;
+    };
+  }>;
+};
+
+type TemplateVariable = 'boat' | 'date' | 'summary' | 'technician';
+
 const TAB_OPTIONS: Array<{ value: WhatsAppTemplateVariant; label: string }> = [
   { value: 'bugun', label: 'Bugun' },
   { value: 'yarin', label: 'Yarin' },
   { value: 'haftalik', label: 'Bu Hafta' },
 ];
 
+const TEMPLATE_VARIABLES: Array<{ key: TemplateVariable; token: string; label: string }> = [
+  { key: 'boat', token: '{{boat}}', label: 'Tekne adi' },
+  { key: 'date', token: '{{date}}', label: 'Kapanis tarihi' },
+  { key: 'summary', token: '{{summary}}', label: 'Servis ozeti' },
+  { key: 'technician', token: '{{technician}}', label: 'Teknisyen(ler)' },
+];
+
+const DEFAULT_CLOSING_TEMPLATE = `Kapanis Bilgisi
+Tekne: {{boat}}
+Tarih: {{date}}
+Servis Ozeti: {{summary}}
+Teknisyen: {{technician}}`;
+
+function formatDateForTemplate(value?: string): string {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function getTechnicianText(service: ServiceWithAssignments | null): string {
+  if (!service) return '-';
+
+  const namesFromLegacy = Array.isArray(service.atananPersonel)
+    ? service.atananPersonel
+        .map((item) => item.personnelAd?.trim())
+        .filter((item): item is string => Boolean(item))
+    : [];
+
+  const namesFromRelation = Array.isArray(service.personeller)
+    ? service.personeller
+        .map((item) => item.personel?.ad?.trim())
+        .filter((item): item is string => Boolean(item))
+    : [];
+
+  const merged = Array.from(new Set([...namesFromLegacy, ...namesFromRelation]));
+  return merged.length > 0 ? merged.join(', ') : '-';
+}
+
+function renderTemplate(template: string, service: ServiceWithAssignments | null): string {
+  if (!service) {
+    return template;
+  }
+
+  const valueMap: Record<TemplateVariable, string> = {
+    boat: service.tekneAdi || '-',
+    date: formatDateForTemplate(service.tarih),
+    summary: service.servisAciklamasi || '-',
+    technician: getTechnicianText(service),
+  };
+
+  return template.replace(/\{\{\s*(boat|date|summary|technician)\s*\}\}/gi, (_, rawKey: string) => {
+    const key = rawKey.toLowerCase() as TemplateVariable;
+    return valueMap[key] ?? '';
+  });
+}
+
 export default function WhatsAppRaporPage() {
+  const searchParams = useSearchParams();
+  const initialServiceId = searchParams.get('serviceId') ?? '';
+
   const [activeTab, setActiveTab] = useState<WhatsAppTemplateVariant>('bugun');
   const [copied, setCopied] = useState(false);
+  const [templateCopied, setTemplateCopied] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
+  const [completedServices, setCompletedServices] = useState<ServiceWithAssignments[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [templateText, setTemplateText] = useState(DEFAULT_CLOSING_TEMPLATE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,20 +112,37 @@ export default function WhatsAppRaporPage() {
         setError(null);
 
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const response = await fetch(
-          '/api/services?limit=2000&durum=RANDEVU_VERILDI,DEVAM_EDIYOR&sort=tarih&order=asc',
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
+        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(payload?.error || 'Servis listesi alinamadi');
+        const [openResponse, completedResponse] = await Promise.all([
+          fetch('/api/services?limit=2000&durum=RANDEVU_VERILDI,DEVAM_EDIYOR&sort=tarih&order=asc', { headers }),
+          fetch('/api/services?limit=300&durum=TAMAMLANDI&sort=tarih&order=desc', { headers }),
+        ]);
+
+        const openPayload = await openResponse.json().catch(() => ({}));
+        const completedPayload = await completedResponse.json().catch(() => ({}));
+
+        if (!openResponse.ok) {
+          throw new Error(openPayload?.error || 'Servis listesi alinamadi');
+        }
+        if (!completedResponse.ok) {
+          throw new Error(completedPayload?.error || 'Kapanmis servis listesi alinamadi');
         }
 
         if (!ignore) {
-          setServices(Array.isArray(payload.services) ? (payload.services as Service[]) : []);
+          const openRows = Array.isArray(openPayload.services) ? (openPayload.services as Service[]) : [];
+          const completedRows = Array.isArray(completedPayload.services)
+            ? (completedPayload.services as ServiceWithAssignments[])
+            : [];
+
+          setServices(openRows);
+          setCompletedServices(completedRows);
+
+          if (initialServiceId && completedRows.some((item) => item.id === initialServiceId)) {
+            setSelectedServiceId(initialServiceId);
+          } else if (completedRows.length > 0) {
+            setSelectedServiceId((prev) => prev || completedRows[0].id);
+          }
         }
       } catch (loadError) {
         if (!ignore) {
@@ -59,7 +157,7 @@ export default function WhatsAppRaporPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [initialServiceId]);
 
   const reportText = useMemo(
     () =>
@@ -76,6 +174,16 @@ export default function WhatsAppRaporPage() {
   );
   const ongoingItems = useMemo(() => getDevamEdenler(services), [services]);
 
+  const selectedService = useMemo(
+    () => completedServices.find((item) => item.id === selectedServiceId) ?? null,
+    [completedServices, selectedServiceId]
+  );
+
+  const templatePreview = useMemo(
+    () => renderTemplate(templateText, selectedService),
+    [templateText, selectedService]
+  );
+
   const whatsappLink = useMemo(
     () => `https://wa.me/?text=${encodeURIComponent(reportText)}`,
     [reportText]
@@ -85,6 +193,12 @@ export default function WhatsAppRaporPage() {
     await navigator.clipboard.writeText(reportText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTemplateCopy = async () => {
+    await navigator.clipboard.writeText(templatePreview);
+    setTemplateCopied(true);
+    setTimeout(() => setTemplateCopied(false), 2000);
   };
 
   return (
@@ -188,8 +302,8 @@ export default function WhatsAppRaporPage() {
                   borderRadius: 'var(--radius-sm)',
                 }}
               >
-                <span>Filtre Durumlari</span>
-                <strong>RANDEVU_VERILDI + DEVAM_EDIYOR</strong>
+                <span>Kapanmis Servis Havuzu</span>
+                <strong>{completedServices.length}</strong>
               </div>
             </div>
           </div>
@@ -208,11 +322,114 @@ export default function WhatsAppRaporPage() {
             >
               <li>Teknik ekip icin rapor turunu secin (Bugun, Yarin, Bu Hafta).</li>
               <li>Kopyala ile metni panoya alin ya da WhatsApp&apos;ta Ac ile direkt gecin.</li>
-              <li>Grupta mesaji gondermeden once gerekiyorsa kisa duzenleme yapin.</li>
+              <li>Kapanis sablon editorunde tek servis secip mesaji ozellestirin.</li>
             </ol>
           </div>
         </div>
       </div>
+
+      <section
+        className="surface-panel"
+        style={{ marginTop: 'var(--space-xl)' }}
+        data-testid="whatsapp-template-editor"
+      >
+        <div className="card-header" style={{ marginBottom: 'var(--space-md)' }}>
+          <h3 className="card-title">Kapanis Rapor Sablon Editoru</h3>
+        </div>
+
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <label>
+              <span style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>
+                Kapanmis Servis
+              </span>
+              <select
+                value={selectedServiceId}
+                onChange={(event) => setSelectedServiceId(event.target.value)}
+                className="form-select"
+                data-testid="whatsapp-template-service-select"
+              >
+                {completedServices.length === 0 ? (
+                  <option value="">Kapanmis servis bulunamadi</option>
+                ) : null}
+                {completedServices.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {formatDateForTemplate(service.tarih)} - {service.tekneAdi}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div>
+              <p style={{ marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>Degiskenler</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-xs)' }}>
+                {TEMPLATE_VARIABLES.map((variable) => (
+                  <span
+                    key={variable.key}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--color-border)',
+                      background: 'var(--color-bg)',
+                      fontSize: '0.8rem',
+                    }}
+                    title={variable.label}
+                  >
+                    {variable.token}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <label>
+              <span style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>
+                Sablon Metni
+              </span>
+              <textarea
+                className="form-textarea"
+                rows={9}
+                value={templateText}
+                onChange={(event) => setTemplateText(event.target.value)}
+                data-testid="whatsapp-template-input"
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setTemplateText(DEFAULT_CLOSING_TEMPLATE)}>
+                Varsayilana Don
+              </button>
+              <button
+                type="button"
+                className={templateCopied ? 'btn btn-success' : 'btn btn-primary'}
+                onClick={handleTemplateCopy}
+                data-testid="whatsapp-template-copy"
+              >
+                {templateCopied ? 'Kopyalandi' : 'Kopyala'}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h4 style={{ marginBottom: 'var(--space-sm)' }}>Onizleme</h4>
+            <pre
+              style={{
+                background: '#1e293b',
+                color: '#e2e8f0',
+                padding: 'var(--space-lg)',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'monospace',
+                fontSize: '0.9rem',
+                lineHeight: 1.6,
+                minHeight: '260px',
+                whiteSpace: 'pre-wrap',
+              }}
+              data-testid="whatsapp-template-preview"
+            >
+              {templatePreview}
+            </pre>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

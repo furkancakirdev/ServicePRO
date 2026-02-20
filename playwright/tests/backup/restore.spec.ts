@@ -65,6 +65,7 @@ test('Backup restore', async ({ page }) => {
 
   const restoreResponse = await page.request.post('/api/backup/restore', {
     data: { dosyaAdi: yedekBilgisi.dosyaAdi },
+    timeout: 120_000,
   });
   const restoreBodyText = await restoreResponse.text();
   expect(restoreResponse.status(), `Restore response body: ${restoreBodyText}`).toBe(200);

@@ -28,6 +28,9 @@ export interface DashboardStats {
   locationWorkload: Array<{ adres: string; count: number }>;
   statusTransitionFunnel: StatusTransitionFunnel;
   unscheduledTrend: Array<{ date: string; count: number }>;
+  qualityTopPerformers: QualityPerformer[];
+  qualityLowPerformers: QualityPerformer[];
+  qualityTrend: Array<{ date: string; averageScore: number; sampleSize: number }>;
   personnelWorkload: PersonnelWorkloadItem[];
   syncHealth: {
     latestStatus: string | null;
@@ -76,6 +79,16 @@ export interface PersonnelWorkloadItem {
   aktifServisSayisi: number;
   capacityStatus: 'LOW' | 'NORMAL' | 'HIGH';
 }
+
+export interface QualityPerformer {
+  id: string;
+  ad: string;
+  unvan: string;
+  ortalamaPuan: number;
+  servisSayisi: number;
+}
+
+export type DashboardRangeDays = 7 | 30 | 90;
 
 export type ProactiveMaintenanceAlertLevel = 'GECIKTI' | 'YAKLASIYOR' | 'PLANLI';
 
@@ -341,9 +354,11 @@ function buildProactiveMaintenanceAlerts(
     .slice(0, MAX_ALERT_COUNT);
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(rangeDays: DashboardRangeDays = 7): Promise<DashboardStats> {
+  const normalizedRangeDays = rangeDays === 30 || rangeDays === 90 ? rangeDays : 7;
   const todayStart = startOfDay(new Date());
   const thisWeek = getWeekRange(todayStart);
+  const trendLookbackStart = addDays(todayStart, -(normalizedRangeDays - 1));
 
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
@@ -390,6 +405,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     waitingOldestRecord,
     locationWorkloadRaw,
     unscheduledTrendRows,
+    qualityRows,
     latestSyncLog,
     latestSyncSuccessLog,
   ] = await Promise.all([
@@ -568,11 +584,33 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         deletedAt: null,
         tarih: null,
         createdAt: {
-          gte: addDays(todayStart, -6),
+          gte: trendLookbackStart,
         },
       },
       select: { createdAt: true },
       orderBy: { createdAt: 'asc' },
+    }),
+    prisma.servisPuan.findMany({
+      where: {
+        tarih: {
+          gte: trendLookbackStart,
+        },
+        servis: {
+          deletedAt: null,
+        },
+      },
+      select: {
+        personelId: true,
+        personelAd: true,
+        finalPuan: true,
+        tarih: true,
+        personel: {
+          select: {
+            unvan: true,
+          },
+        },
+      },
+      orderBy: { tarih: 'asc' },
     }),
     prisma.syncLog.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -659,7 +697,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 
   const trendMap = new Map<string, number>();
-  for (let offset = 6; offset >= 0; offset -= 1) {
+  for (let offset = normalizedRangeDays - 1; offset >= 0; offset -= 1) {
     const day = addDays(todayStart, -offset);
     trendMap.set(day.toISOString().slice(0, 10), 0);
   }
@@ -669,6 +707,76 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
   }
   const unscheduledTrend = Array.from(trendMap.entries()).map(([date, count]) => ({ date, count }));
+
+  const qualityByPerson = new Map<
+    string,
+    {
+      id: string;
+      ad: string;
+      unvan: string;
+      toplamPuan: number;
+      servisSayisi: number;
+    }
+  >();
+
+  const qualityTrendMap = new Map<string, { toplamPuan: number; sampleSize: number }>();
+  for (let offset = normalizedRangeDays - 1; offset >= 0; offset -= 1) {
+    const day = addDays(todayStart, -offset);
+    qualityTrendMap.set(day.toISOString().slice(0, 10), {
+      toplamPuan: 0,
+      sampleSize: 0,
+    });
+  }
+
+  for (const row of qualityRows) {
+    const personState = qualityByPerson.get(row.personelId) ?? {
+      id: row.personelId,
+      ad: row.personelAd,
+      unvan: row.personel?.unvan ?? '-',
+      toplamPuan: 0,
+      servisSayisi: 0,
+    };
+    personState.toplamPuan += row.finalPuan;
+    personState.servisSayisi += 1;
+    qualityByPerson.set(row.personelId, personState);
+
+    const trendKey = startOfDay(row.tarih).toISOString().slice(0, 10);
+    const trendState = qualityTrendMap.get(trendKey);
+    if (!trendState) continue;
+    trendState.toplamPuan += row.finalPuan;
+    trendState.sampleSize += 1;
+    qualityTrendMap.set(trendKey, trendState);
+  }
+
+  const qualityPerformers: QualityPerformer[] = Array.from(qualityByPerson.values()).map((item) => ({
+    id: item.id,
+    ad: item.ad,
+    unvan: item.unvan,
+    ortalamaPuan: Number((item.toplamPuan / item.servisSayisi).toFixed(1)),
+    servisSayisi: item.servisSayisi,
+  }));
+
+  const qualitySortedDesc = [...qualityPerformers].sort((left, right) => {
+    if (right.ortalamaPuan !== left.ortalamaPuan) {
+      return right.ortalamaPuan - left.ortalamaPuan;
+    }
+    return right.servisSayisi - left.servisSayisi;
+  });
+
+  const qualitySortedAsc = [...qualityPerformers].sort((left, right) => {
+    if (left.ortalamaPuan !== right.ortalamaPuan) {
+      return left.ortalamaPuan - right.ortalamaPuan;
+    }
+    return right.servisSayisi - left.servisSayisi;
+  });
+
+  const qualityTopPerformers = qualitySortedDesc.slice(0, 5);
+  const qualityLowPerformers = qualitySortedAsc.slice(0, 5);
+  const qualityTrend = Array.from(qualityTrendMap.entries()).map(([date, state]) => ({
+    date,
+    averageScore: state.sampleSize > 0 ? Number((state.toplamPuan / state.sampleSize).toFixed(1)) : 0,
+    sampleSize: state.sampleSize,
+  }));
 
   const personnelWorkload: PersonnelWorkloadItem[] = teknisyenDurumu
     .map((person) => {
@@ -703,6 +811,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     locationWorkload,
     statusTransitionFunnel,
     unscheduledTrend,
+    qualityTopPerformers,
+    qualityLowPerformers,
+    qualityTrend,
     personnelWorkload,
     syncHealth,
     gecikenServisler,

@@ -41,6 +41,10 @@ function dosyaZamanEtiketiOlustur(tarih: Date): string {
   return `${yil}${ay}${gun}-${saat}${dakika}${saniye}`;
 }
 
+function yedekTurEtiketiGetir(tur: YedekTuru): 'manual' | 'auto' {
+  return tur === 'otomatik' ? 'auto' : 'manual';
+}
+
 function dosyaBoyutuFormatla(boyutBayt: number): string {
   if (boyutBayt < 1024) return `${boyutBayt} B`;
   if (boyutBayt < 1024 * 1024) return `${(boyutBayt / 1024).toFixed(1)} KB`;
@@ -79,7 +83,7 @@ export async function yedekOlustur(secenekler?: {
   const olusturmaZamani = new Date();
   const timestamp = olusturmaZamani.toISOString();
   const dosyaEtiketi = dosyaZamanEtiketiOlustur(olusturmaZamani);
-  const dosyaAdi = `${YEDEK_DOSYA_ON_EKI}-${dosyaEtiketi}.json`;
+  const dosyaAdi = `${YEDEK_DOSYA_ON_EKI}-${yedekTurEtiketiGetir(tur)}-${dosyaEtiketi}.json`;
   const dosyaYolu = path.join(yedekKlasoru, dosyaAdi);
 
   const [veritabani, sheets, konfig] = await Promise.all([

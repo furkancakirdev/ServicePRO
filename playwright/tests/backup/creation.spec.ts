@@ -36,7 +36,7 @@ test('Backup creation', async ({ page }) => {
   await expect(page.locator('[data-testid="backup-success-message"]')).toBeVisible({
     timeout: 60000,
   });
-  await expect(page.locator('[data-testid="backup-list"]')).toContainText('servicepro-');
+  await expect(page.locator('[data-testid="backup-list"]')).toContainText('servicepro-manual-');
 
   const sonrakiDosyalar = await yedekDosyalariniGetir();
   const yeniDosya = sonrakiDosyalar.find((dosya) => !oncekiDosyalar.has(dosya));

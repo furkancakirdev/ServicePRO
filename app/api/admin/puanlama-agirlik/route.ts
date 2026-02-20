@@ -10,7 +10,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { checkYetkiliAccess } from '@/lib/utils/yetkili-whitelist';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,15 +18,6 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request, ['ADMIN']);
     if (!auth.ok) return auth.response;
-    const userId = auth.payload.userId;
-
-    const hasYetkiliAccess = await checkYetkiliAccess(userId);
-    if (!hasYetkiliAccess) {
-      return NextResponse.json(
-        { success: false, error: 'Bu işlem için whitelist yetkisi gereklidir' },
-        { status: 403 }
-      );
-    }
 
     const katsayilar = await prisma.zorlukKatsayi.findMany({
       orderBy: { isTuru: 'asc' },
@@ -71,14 +61,6 @@ export async function PUT(request: NextRequest) {
     const auth = await requireAuth(request, ['ADMIN']);
     if (!auth.ok) return auth.response;
     const userId = auth.payload.userId;
-
-    const hasYetkiliAccess = await checkYetkiliAccess(userId);
-    if (!hasYetkiliAccess) {
-      return NextResponse.json(
-        { success: false, error: 'Bu işlem için whitelist yetkisi gereklidir' },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const { katsayilar, agirliklar } = body;

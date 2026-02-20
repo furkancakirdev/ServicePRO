@@ -14,6 +14,7 @@ type IndexRow = { indexname: string };
 const BEKLENEN_TABLOLAR = [
   'servis_durumlari',
   'konumlar',
+  'blokaj_nedenleri',
   'personel_unvanlari',
   'system_settings',
 ] as const;
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
-          AND table_name IN ('servis_durumlari', 'konumlar', 'personel_unvanlari', 'system_settings')
+          AND table_name IN ('servis_durumlari', 'konumlar', 'blokaj_nedenleri', 'personel_unvanlari', 'system_settings')
       `,
       prisma.$queryRaw<KolonRow[]>`
         SELECT table_name, column_name

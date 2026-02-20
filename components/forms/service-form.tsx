@@ -28,17 +28,7 @@ const serviceFormSchema = z.object({
   servisAciklamasi: z.string().min(5, 'Servis açıklaması en az 5 karakter olmalı'),
   irtibatKisi: z.string().optional(),
   telefon: z.string().optional(),
-  durum: z.enum([
-    'RANDEVU_VERILDI',
-    'DEVAM_EDIYOR',
-    'PARCA_BEKLIYOR',
-    'MUSTERI_ONAY_BEKLIYOR',
-    'RAPOR_BEKLIYOR',
-    'KESIF_KONTROL',
-    'TAMAMLANDI',
-    'IPTAL',
-    'ERTELENDI',
-  ]),
+  durum: z.string().min(1, 'Durum seciniz'),
   taseronNotlari: z.string().optional(),
 });
 
@@ -52,6 +42,8 @@ interface PersonelOption {
   ad: string;
   unvan: PersonelUnvan;
   aktif: boolean;
+  aktifIsSayisi?: number;
+  guncelDurum?: 'PASIF' | 'MUSAIT' | 'PLANLI' | 'YOGUN';
 }
 
 type PartCategory = 'TASERON_BEKLEYEN' | 'SIPARIS_EDILEN_YEDEK';
@@ -89,6 +81,17 @@ interface PartsEtaSettings {
 interface RuntimeSettings {
   formGuards: FormGuardSettings;
   partsEta: PartsEtaSettings;
+}
+
+interface WorkOrderDictionariesResponse {
+  statuses: Array<{
+    key: string;
+    label: string;
+  }>;
+  locations: Array<{
+    key: string;
+    label: string;
+  }>;
 }
 
 interface ServiceDetail {
@@ -175,6 +178,13 @@ const UNVAN_LABELS: Record<PersonelUnvan, string> = {
   CIRAK: 'Çırak',
   YONETICI: 'Yönetici',
   OFIS: 'Ofis',
+};
+
+const PERSONEL_DURUM_LABELS: Record<NonNullable<PersonelOption['guncelDurum']>, string> = {
+  PASIF: 'Pasif',
+  MUSAIT: 'Musait',
+  PLANLI: 'Planli',
+  YOGUN: 'Yogun',
 };
 
 const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
@@ -355,6 +365,8 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
   const [personnelLoading, setPersonnelLoading] = React.useState(true);
   const [assignments, setAssignments] = React.useState<Record<string, PersonelRol>>({});
   const [runtimeSettings, setRuntimeSettings] = React.useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
+  const [statusOptions, setStatusOptions] = React.useState<Array<{ key: string; label: string }>>([]);
+  const [locationOptions, setLocationOptions] = React.useState<Array<{ key: string; label: string }>>([]);
   const [subcontractorParts, setSubcontractorParts] = React.useState<ServicePart[]>([
     createEmptyPart('TASERON_BEKLEYEN'),
   ]);
@@ -387,6 +399,26 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
   });
 
   const selectedStatus = watch('durum');
+  const selectedLocation = watch('yer');
+
+  const visibleStatusOptions = React.useMemo(() => {
+    const options = [...statusOptions];
+    if (selectedStatus && !options.some((item) => item.key === selectedStatus)) {
+      options.push({ key: selectedStatus, label: selectedStatus });
+    }
+    if (options.length === 0) {
+      options.push({ key: 'RANDEVU_VERILDI', label: 'Randevu Verildi' });
+    }
+    return options;
+  }, [selectedStatus, statusOptions]);
+
+  const visibleLocationOptions = React.useMemo(() => {
+    const options = [...locationOptions];
+    if (selectedLocation && !options.some((item) => item.key === selectedLocation)) {
+      options.push({ key: selectedLocation, label: selectedLocation });
+    }
+    return options;
+  }, [locationOptions, selectedLocation]);
 
   const selectedAssignments = React.useMemo(
     () =>
@@ -572,6 +604,8 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
           ad: string;
           unvan: 'usta' | 'cirak' | 'yonetici' | 'ofis';
           aktif: boolean;
+          aktifIsSayisi?: number;
+          guncelDurum?: 'PASIF' | 'MUSAIT' | 'PLANLI' | 'YOGUN';
         }>;
 
         const mapped: PersonelOption[] = payload.map((personel) => ({
@@ -586,6 +620,8 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
               ? 'YONETICI'
               : 'OFIS',
           aktif: personel.aktif,
+          aktifIsSayisi: personel.aktifIsSayisi ?? 0,
+          guncelDurum: personel.guncelDurum,
         }));
 
         setPersonnelOptions((prev) => mergePersonnelOptions(prev, mapped));
@@ -612,6 +648,25 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
     };
 
     void loadRuntimeSettings();
+  }, []);
+
+  React.useEffect(() => {
+    const loadDictionaries = async () => {
+      try {
+        const response = await authorizedFetch('/api/dictionaries/work-order');
+        if (!response.ok) {
+          throw new Error('Sozluk verileri yuklenemedi');
+        }
+
+        const payload = (await response.json()) as WorkOrderDictionariesResponse;
+        setStatusOptions(payload.statuses ?? []);
+        setLocationOptions(payload.locations ?? []);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Sozluk verileri yuklenemedi');
+      }
+    };
+
+    void loadDictionaries();
   }, []);
 
   React.useEffect(() => {
@@ -750,7 +805,12 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
 
       setIsScored(true);
       setShowScoring(false);
-      toast.success('Puanlama kaydedildi, servis tamamlandı.');
+      toast.success('Puanlama kaydedildi, servis tamamlandı.', {
+        action: {
+          label: 'Sablon olustur',
+          onClick: () => router.push(`/raporlar/whatsapp?serviceId=${servisId}`),
+        },
+      });
       router.push(`/servisler/${servisId}/duzenle`);
       router.refresh();
     },
@@ -865,15 +925,11 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
                   {...register('durum')}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="RANDEVU_VERILDI">Randevu Verildi</option>
-                  <option value="DEVAM_EDIYOR">Devam Ediyor</option>
-                  <option value="PARCA_BEKLIYOR">Parça Bekliyor</option>
-                  <option value="MUSTERI_ONAY_BEKLIYOR">Müşteri Onay Bekliyor</option>
-                  <option value="RAPOR_BEKLIYOR">Rapor Bekliyor</option>
-                  <option value="KESIF_KONTROL">Keşif / Kontrol</option>
-                  <option value="TAMAMLANDI">Tamamlandı</option>
-                  <option value="IPTAL">İptal</option>
-                  <option value="ERTELENDI">Ertelendi</option>
+                  {visibleStatusOptions.map((statusOption) => (
+                    <option key={statusOption.key} value={statusOption.key}>
+                      {statusOption.label}
+                    </option>
+                  ))}
                 </select>
                 {selectedStatus === 'TAMAMLANDI' && (
                   <p className="text-xs text-amber-400">
@@ -891,7 +947,17 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
               </div>
               <div className="space-y-2">
                 <Label>Lokasyon</Label>
-                <Input {...register('yer')} />
+                <select
+                  {...register('yer')}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Lokasyon secin</option>
+                  {visibleLocationOptions.map((locationOption) => (
+                    <option key={locationOption.key} value={locationOption.key}>
+                      {locationOption.label}
+                    </option>
+                  ))}
+                </select>
                 {errors.yer && <p className="text-sm text-destructive">{errors.yer.message}</p>}
               </div>
             </div>
@@ -1145,6 +1211,11 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
                           </label>
                           <Badge variant="outline">{UNVAN_LABELS[personel.unvan]}</Badge>
                         </div>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Acik is: {personel.aktifIsSayisi ?? 0} -{' '}
+                          {PERSONEL_DURUM_LABELS[personel.guncelDurum ?? (personel.aktif ? 'MUSAIT' : 'PASIF')]}
+                        </p>
 
                         {selected && (
                           <div className="mt-2 flex gap-2">

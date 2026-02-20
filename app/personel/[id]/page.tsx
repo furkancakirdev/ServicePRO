@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { fetchPersonnelById, fetchServices } from '@/lib/api';
+import { fetchPersonnelById } from '@/lib/api';
 import { Personnel, Service, UNVAN_CONFIG } from '@/types';
 
 type EditablePersonel = {
@@ -24,6 +24,66 @@ function toEditState(personel: Personnel): EditablePersonel {
   };
 }
 
+const OPEN_SERVICE_STATUS_PARAM = [
+  'RANDEVU_VERILDI',
+  'DEVAM_EDIYOR',
+  'PARCA_BEKLIYOR',
+  'MUSTERI_ONAY_BEKLIYOR',
+  'RAPOR_BEKLIYOR',
+  'KESIF_KONTROL',
+  'ERTELENDI',
+].join(',');
+
+async function fetchOpenServicesForPersonnel(personelId: string): Promise<Service[]> {
+  const params = new URLSearchParams({
+    personelId,
+    limit: '200',
+    status: OPEN_SERVICE_STATUS_PARAM,
+  });
+
+  const response = await fetch(`/api/services?${params.toString()}`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Personel is listesi alinamadi');
+  }
+
+  const payload = (await response.json()) as {
+    services?: Array<
+      Service & {
+        personeller?: Array<{
+          personelId: string;
+          rol: 'SORUMLU' | 'DESTEK';
+          personel?: { ad?: string | null };
+        }>;
+      }
+    >;
+  };
+
+  if (!Array.isArray(payload.services)) {
+    return [];
+  }
+
+  return payload.services.map((service) => {
+    const fallbackAssignments: Service['atananPersonel'] = Array.isArray(service.personeller)
+      ? service.personeller.map((assignment) => ({
+          personnelId: assignment.personelId,
+          personnelAd: assignment.personel?.ad ?? '',
+          rol: assignment.rol === 'SORUMLU' ? ('sorumlu' as const) : ('destek' as const),
+        }))
+      : [];
+
+    return {
+      ...service,
+      atananPersonel:
+        Array.isArray(service.atananPersonel) && service.atananPersonel.length > 0
+          ? service.atananPersonel
+          : fallbackAssignments,
+    };
+  });
+}
+
 export default function PersonelDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -36,6 +96,7 @@ export default function PersonelDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const adInputRef = useRef<HTMLInputElement | null>(null);
   const [formState, setFormState] = useState<EditablePersonel>({
     ad: '',
     rol: 'teknisyen',
@@ -49,15 +110,15 @@ export default function PersonelDetailPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [personnelData, servicesData] = await Promise.all([fetchPersonnelById(id), fetchServices()]);
+        const [personnelData, servicesData] = await Promise.all([
+          fetchPersonnelById(id),
+          fetchOpenServicesForPersonnel(id),
+        ]);
         setPersonel(personnelData);
 
         if (personnelData) {
           setFormState(toEditState(personnelData));
-          const assigned = servicesData.filter((service) =>
-            service.atananPersonel?.some((assignment) => assignment.personnelId === id)
-          );
-          setAssignedServices(assigned);
+          setAssignedServices(servicesData);
         }
       } catch (error) {
         console.error('Failed to load personnel:', error);
@@ -77,7 +138,7 @@ export default function PersonelDetailPage() {
 
   const handleSave = async () => {
     if (!personel) return;
-    const temizAd = formState.ad.trim();
+    const temizAd = (adInputRef.current?.value ?? formState.ad).trim();
     if (temizAd.length < 2) {
       setFormError('Ad en az 2 karakter olmalidir');
       setFormSuccess(null);
@@ -117,6 +178,11 @@ export default function PersonelDetailPage() {
       const updatedPersonel: Personnel = {
         ...(personel as Personnel),
         ...payload,
+        ad: temizAd,
+        rol: formState.rol,
+        unvan: formState.unvan,
+        aktif: formState.aktif,
+        girisYili: formState.girisYili ? Number(formState.girisYili) : undefined,
       };
 
       setPersonel(updatedPersonel);
@@ -258,6 +324,7 @@ export default function PersonelDetailPage() {
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Ad</label>
                 <input
+                  ref={adInputRef}
                   className="form-input"
                   value={formState.ad}
                   disabled={!editing}
@@ -329,7 +396,7 @@ export default function PersonelDetailPage() {
             </div>
           </div>
 
-          <div className="surface-panel">
+          <div className="surface-panel" data-testid="personel-score-summary">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
               Performans
             </h3>
@@ -344,6 +411,9 @@ export default function PersonelDetailPage() {
             >
               <div style={{ fontSize: '3rem', fontWeight: 700 }}>{avgPuan || '-'}</div>
               <div style={{ opacity: 0.8 }}>Aylik Ortalama Puan</div>
+              <div style={{ marginTop: 'var(--space-sm)', fontSize: '0.85rem', opacity: 0.85 }}>
+                Acik Is Emri: {assignedServices.length}
+              </div>
             </div>
           </div>
         </div>
@@ -369,14 +439,14 @@ export default function PersonelDetailPage() {
             </div>
           </div>
 
-          <div className="surface-panel">
+          <div className="surface-panel" data-testid="personel-open-work-orders">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
-              Atanan Servisler ({assignedServices.length})
+              Acik Is Emirleri ({assignedServices.length})
             </h3>
 
             {assignedServices.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-muted)' }}>
-                Henuz atanan servis yok.
+                Bu personel icin acik is emri bulunamadi.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -385,7 +455,7 @@ export default function PersonelDetailPage() {
                   return (
                     <Link
                       key={service.id}
-                      href={`/servisler/${service.id}/duzenle`}
+                      href={`/servisler/${service.id}`}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -397,6 +467,7 @@ export default function PersonelDetailPage() {
                         color: 'var(--color-text)',
                         borderLeft: `3px solid ${assignment?.rol === 'sorumlu' ? 'var(--color-primary)' : 'var(--color-success)'}`,
                       }}
+                      data-testid={`personel-open-service-link-${service.id}`}
                     >
                       <div>
                         <div style={{ fontWeight: 500 }}>{service.tekneAdi}</div>

@@ -7,6 +7,11 @@ export interface ServisFilterState {
   durum?: string[];
   konum?: string[];
   tarih?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+  teknisyen?: string[];
+  oncelik?: string[];
+  blokaj?: string[];
   queue?: QueueFilter;
   groupBy?: DataGridGroupBy;
   datePreset?: ServisDatePreset;
@@ -54,6 +59,11 @@ export function normalizeServisFilterState(state: ServisFilterState): ServisFilt
   const durum = uniqSorted(state.durum);
   const konum = uniqSorted(state.konum);
   const tarih = uniqSorted(state.tarih);
+  const dateFrom = state.dateFrom?.trim() || undefined;
+  const dateTo = state.dateTo?.trim() || undefined;
+  const teknisyen = uniqSorted(state.teknisyen);
+  const oncelik = uniqSorted(state.oncelik);
+  const blokaj = uniqSorted(state.blokaj);
   const queue = normalizeQueue(state.queue);
   const groupBy = normalizeGroupBy(state.groupBy);
   const datePreset = normalizeDatePreset(state.datePreset);
@@ -64,6 +74,11 @@ export function normalizeServisFilterState(state: ServisFilterState): ServisFilt
   if (durum && !areArraysEqual(durum, DEFAULT_STATUS_FILTERS)) normalized.durum = durum;
   if (konum) normalized.konum = konum;
   if (tarih) normalized.tarih = tarih;
+  if (dateFrom) normalized.dateFrom = dateFrom;
+  if (dateTo) normalized.dateTo = dateTo;
+  if (teknisyen) normalized.teknisyen = teknisyen;
+  if (oncelik) normalized.oncelik = oncelik;
+  if (blokaj) normalized.blokaj = blokaj;
   if (queue && queue !== 'ALL') normalized.queue = queue;
   if (groupBy && groupBy !== 'none') normalized.groupBy = groupBy;
   if (datePreset && datePreset !== 'ALL') normalized.datePreset = datePreset;

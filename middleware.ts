@@ -13,9 +13,11 @@ const publicRoutes = [
   '/api/auth/register',
   '/api/auth/me',
   '/api/auth/logout',
+  '/health',
   '/api/health',
   '/api/cron/sync',
   '/api/cron/backup',
+  '/api/cron/alerts',
 ];
 
 // Static files that should be ignored
@@ -25,7 +27,7 @@ const staticFilePattern = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|
 // Format: { path: requiredMinimumRole }
 const protectedRoutes = {
   '/admin': 'ADMIN',
-  '/ayarlar': 'YETKILI',
+  '/ayarlar': 'ADMIN',
   '/users': 'ADMIN',
   '/raporlar': 'YETKILI',
   '/personel': 'YETKILI',
@@ -37,6 +39,34 @@ const roleLevels: Record<CanonicalRole, number> = {
   ADMIN: 4,
   YETKILI: 3,
 };
+
+function buildContentSecurityPolicy(): string {
+  const scriptSources = ["'self'", "'unsafe-inline'"];
+  if (process.env.NODE_ENV !== 'production') {
+    scriptSources.push("'unsafe-eval'");
+  }
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSources.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https: wss:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+}
+
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('x-content-type-options', 'nosniff');
+  response.headers.set('x-frame-options', 'DENY');
+  response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+  response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set('content-security-policy', buildContentSecurityPolicy());
+  return response;
+}
 
 /**
  * Check if a role meets or exceeds the minimum required role level
@@ -104,17 +134,17 @@ export async function middleware(request: NextRequest) {
 
   // Skip static files
   if (staticFilePattern.test(pathname)) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Skip _next internal routes
   if (pathname.startsWith('/_next')) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Check for token in cookie or Authorization header
@@ -126,11 +156,11 @@ export async function middleware(request: NextRequest) {
   if (!token) {
     // No token found
     if (pathname.startsWith('/api')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return applySecurityHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   // Verify token
@@ -139,11 +169,11 @@ export async function middleware(request: NextRequest) {
   if (!payload) {
     // Invalid token
     if (pathname.startsWith('/api')) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return applySecurityHeaders(NextResponse.json({ error: 'Invalid token' }, { status: 401 }));
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   // Check role-based access control
@@ -151,11 +181,13 @@ export async function middleware(request: NextRequest) {
   if (requiredRole && !hasMinimumRole(payload.role, requiredRole)) {
     // User doesn't have required role
     if (pathname.startsWith('/api')) {
-      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
+      return applySecurityHeaders(
+        NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 })
+      );
     }
     // Redirect to unauthorized page or home
     const unauthorizedUrl = new URL('/unauthorized', request.url);
-    return NextResponse.redirect(unauthorizedUrl);
+    return applySecurityHeaders(NextResponse.redirect(unauthorizedUrl));
   }
 
   // Token is valid and user has required role - add user info to headers
@@ -164,7 +196,7 @@ export async function middleware(request: NextRequest) {
   response.headers.set('x-user-email', payload.email);
   response.headers.set('x-user-role', normalizeRole(payload.role) ?? payload.role);
 
-  return response;
+  return applySecurityHeaders(response);
 }
 
 /**

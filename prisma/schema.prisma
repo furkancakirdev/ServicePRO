@@ -33,6 +33,14 @@ model User {
   yetkiliDegerlendirmeleriUsta   YetkiliDegerlendirmeUsta[] @relation("YetkiliDegerlendirmeUsta_Yetkili")
   yetkiliDegerlendirmeleriCirak  YetkiliDegerlendirmeCirak[] @relation("YetkiliDegerlendirmeCirak_Yetkili")
   ofisindenServisler  Service[] @relation("User_OfisServisler")
+  confirmedAppointments Appointment[] @relation("User_ConfirmedAppointments")
+  servisNotlari      ServiceNote[] @relation("ServiceNote_Olusturan")
+  servisEkleri       ServiceAttachment[] @relation("ServiceAttachment_Olusturan")
+  dispatchPreference DispatchPreference? @relation("User_DispatchPreference")
+  bookings           Booking[] @relation("User_Bookings")
+  leads              Lead[] @relation("User_Leads")
+  alertRules         AlertRule[] @relation("User_AlertRules")
+  notifications      Notification[] @relation("User_Notifications")
 
   @@map("users")
 }
@@ -69,6 +77,7 @@ model Personel {
   ismailDegerlendirmeleri        IsmailDegerlendirme[]
   aylikPerformanslar    AylikPerformans[]
   unvanAyari            PersonelUnvanAyar? @relation("Personel_UnvanAyari", fields: [unvanId], references: [id], onDelete: SetNull)
+  appointments          Appointment[] @relation("Personel_Appointments")
 
   @@index([aktif])
   @@index([unvan])
@@ -109,10 +118,310 @@ model Tekne {
 
   // Relations
   servisler     Service[] @relation("Tekne_Servisler")
+  bookings      Booking[]
+  leads         Lead[]
 
   @@index([aktif])
   @@index([marka])
   @@map("tekne")
+}
+
+enum AppointmentStatus {
+  PLANLANDI
+  ONAY_BEKLIYOR
+  ONAYLANDI
+  YOLDA
+  VARIS
+  BASLADI
+  TAMAMLANDI
+  IPTAL
+  ERTELENDI
+}
+
+enum BookingStatus {
+  YENI
+  ISLEMDE
+  JOB_OLUSTURULDU
+  LEAD_OLUSTURULDU
+  REDDEDILDI
+}
+
+enum LeadStatus {
+  YENI
+  TAKIPTE
+  TEKLIF_BEKLIYOR
+  KAYBEDILDI
+  KAZANILDI
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  YENI
+  OKUNDU
+  ARSIV
+}
+
+enum PricebookItemType {
+  HIZMET
+  MALZEME
+  PAKET
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  organizationId  String            @default("org_default") @map("organization_id")
+
+  servisId        String            @map("servis_id")
+  servis          Service           @relation("Service_Appointments", fields: [servisId], references: [id], onDelete: Cascade)
+
+  personelId      String?           @map("personel_id")
+  personel        Personel?         @relation("Personel_Appointments", fields: [personelId], references: [id], onDelete: SetNull)
+
+  baslangicAt     DateTime          @map("baslangic_at")
+  bitisAt         DateTime          @map("bitis_at")
+  status          AppointmentStatus @default(PLANLANDI)
+
+  confirmedAt     DateTime?         @map("confirmed_at")
+  confirmedById   String?           @map("confirmed_by_id")
+  confirmedBy     User?             @relation("User_ConfirmedAppointments", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  notlar          String?
+  sira            Int               @default(0)
+  kilitli         Boolean           @default(false)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  deletedAt       DateTime?         @map("deleted_at")
+
+  @@index([servisId])
+  @@index([personelId])
+  @@index([baslangicAt])
+  @@index([status])
+  @@index([personelId, baslangicAt, bitisAt])
+  @@map("appointment")
+}
+
+model DispatchPreference {
+  id                  String   @id @default(cuid())
+  organizationId      String   @default("org_default") @map("organization_id")
+  userId              String   @unique @map("user_id")
+  user                User     @relation("User_DispatchPreference", fields: [userId], references: [id], onDelete: Cascade)
+  varsayilanGorunum   String   @default("DAY") @map("varsayilan_gorunum")
+  gosterilenPersonelIds String? @map("gosterilen_personel_ids")
+  yogunMod            Boolean  @default(true) @map("yogun_mod")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("dispatch_preference")
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  organizationId     String        @default("org_default") @map("organization_id")
+  kaynak             String?
+  arayanAd           String?       @map("arayan_ad")
+  telefon            String?
+  email              String?
+  tekneAd            String?       @map("tekne_ad")
+  tekneSeriNo        String?       @map("tekne_seri_no")
+  konu               String?
+  notlar             String?
+  tercihTarih        DateTime?     @map("tercih_tarih")
+  tercihSaatAraligi  String?       @map("tercih_saat_araligi")
+  status             BookingStatus @default(YENI)
+
+  tekneId            String?       @map("tekne_id")
+  tekne              Tekne?        @relation(fields: [tekneId], references: [id], onDelete: SetNull)
+
+  servisId           String?       @map("servis_id")
+  servis             Service?      @relation(fields: [servisId], references: [id], onDelete: SetNull)
+
+  leadId             String?       @map("lead_id")
+  lead               Lead?         @relation("Lead_Bookings", fields: [leadId], references: [id], onDelete: SetNull)
+
+  ownerUserId        String?       @map("owner_user_id")
+  ownerUser          User?         @relation("User_Bookings", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([telefon])
+  @@index([ownerUserId])
+  @@index([createdAt])
+  @@map("booking")
+}
+
+model Lead {
+  id                 String      @id @default(cuid())
+  organizationId     String      @default("org_default") @map("organization_id")
+  kaynak             String?
+  ad                 String?
+  telefon            String?
+  email              String?
+  konu               String?
+  notlar             String?
+  status             LeadStatus  @default(YENI)
+  takipAt            DateTime?   @map("takip_at")
+
+  tekneId            String?     @map("tekne_id")
+  tekne              Tekne?      @relation(fields: [tekneId], references: [id], onDelete: SetNull)
+
+  ownerUserId        String?     @map("owner_user_id")
+  ownerUser          User?       @relation("User_Leads", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  bookings           Booking[]   @relation("Lead_Bookings")
+
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([takipAt])
+  @@index([ownerUserId])
+  @@map("lead")
+}
+
+model AlertRule {
+  id              String              @id @default(cuid())
+  organizationId  String              @default("org_default") @map("organization_id")
+  ad              String
+  aktif           Boolean             @default(true)
+  eventTipi       String              @map("event_tipi")
+  kosulJson       String              @map("kosul_json")
+  hedefRol        UserRole?           @map("hedef_rol")
+  hedefUserId     String?             @map("hedef_user_id")
+  hedefUser       User?               @relation("User_AlertRules", fields: [hedefUserId], references: [id], onDelete: SetNull)
+  kanal           NotificationChannel @default(IN_APP)
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@index([aktif])
+  @@index([eventTipi])
+  @@index([hedefUserId])
+  @@map("alert_rule")
+}
+
+model Notification {
+  id              String             @id @default(cuid())
+  organizationId  String             @default("org_default") @map("organization_id")
+  userId          String             @map("user_id")
+  user            User               @relation("User_Notifications", fields: [userId], references: [id], onDelete: Cascade)
+  baslik          String
+  mesaj           String
+  entityTipi      String?            @map("entity_tipi")
+  entityId        String?            @map("entity_id")
+  actionUrl       String?            @map("action_url")
+  status          NotificationStatus @default(YENI)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  readAt          DateTime?          @map("read_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@map("notification")
+}
+
+model PricebookCategory {
+  id              String             @id @default(cuid())
+  organizationId  String             @default("org_default") @map("organization_id")
+  ad              String
+  parentId        String?            @map("parent_id")
+  parent          PricebookCategory? @relation("PB_CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children        PricebookCategory[] @relation("PB_CategoryTree")
+  sira            Int                @default(0)
+  aktif           Boolean            @default(true)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  items           PricebookItem[]
+
+  @@index([aktif])
+  @@index([parentId])
+  @@map("pricebook_category")
+}
+
+model PricebookItem {
+  id                 String            @id @default(cuid())
+  organizationId     String            @default("org_default") @map("organization_id")
+  tip                PricebookItemType
+  kod                String?           @unique
+  ad                 String
+  aciklama           String?
+  birim              String?
+  varsayilanSureSaat Decimal?          @map("varsayilan_sure_saat") @db.Decimal(10, 2)
+  varsayilanFiyat    Decimal?          @map("varsayilan_fiyat") @db.Decimal(12, 2)
+  maliyet            Decimal?          @db.Decimal(12, 2)
+  categoryId         String?           @map("category_id")
+  category           PricebookCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  aktif              Boolean           @default(true)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  lineItems          JobLineItem[]
+  templateItems      JobTemplateItem[]
+
+  @@index([tip])
+  @@index([aktif])
+  @@index([categoryId])
+  @@index([ad])
+  @@map("pricebook_item")
+}
+
+model JobLineItem {
+  id              String         @id @default(cuid())
+  organizationId  String         @default("org_default") @map("organization_id")
+  servisId        String         @map("servis_id")
+  servis          Service        @relation("Service_LineItems", fields: [servisId], references: [id], onDelete: Cascade)
+  pricebookItemId String?        @map("pricebook_item_id")
+  pricebookItem   PricebookItem? @relation(fields: [pricebookItemId], references: [id], onDelete: SetNull)
+  ad              String
+  miktar          Decimal        @default(1.0) @db.Decimal(12, 3)
+  birimFiyat      Decimal        @map("birim_fiyat") @db.Decimal(12, 2)
+  toplam          Decimal        @map("toplam") @db.Decimal(14, 2)
+  notlar          String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([servisId])
+  @@index([pricebookItemId])
+  @@map("job_line_item")
+}
+
+model JobTemplate {
+  id              String            @id @default(cuid())
+  organizationId  String            @default("org_default") @map("organization_id")
+  ad              String
+  aciklama        String?
+  aktif           Boolean           @default(true)
+  defaultStatus   String?           @map("default_status")
+  defaultNotlar   String?           @map("default_notlar")
+  items           JobTemplateItem[]
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([aktif])
+  @@map("job_template")
+}
+
+model JobTemplateItem {
+  id              String         @id @default(cuid())
+  templateId      String         @map("template_id")
+  template        JobTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  pricebookItemId String?        @map("pricebook_item_id")
+  pricebookItem   PricebookItem? @relation(fields: [pricebookItemId], references: [id], onDelete: SetNull)
+  ad              String
+  miktar          Decimal        @default(1.0) @db.Decimal(12, 3)
+  birimFiyat      Decimal        @map("birim_fiyat") @db.Decimal(12, 2)
+  sira            Int            @default(0)
+
+  @@index([templateId])
+  @@index([pricebookItemId])
+  @@map("job_template_item")
 }
 
 // ==================== SERVİS ====================
@@ -153,8 +462,13 @@ model Service {
   konumAyari       Konum?        @relation("Servis_KonumAyari", fields: [konumId], references: [id], onDelete: SetNull)
   personeller      ServicePersonel[]
   bekleyenParcalar ParcaBekleme[]
+  appointments     Appointment[] @relation("Service_Appointments")
+  lineItems        JobLineItem[] @relation("Service_LineItems")
+  notlar           ServiceNote[]
+  ekler            ServiceAttachment[]
   puanlar          ServisPuan[]
   kapanisRaporu    KapanisRaporu?
+  bookings         Booking[]
 
   @@index([tarih])
   @@index([durum])
@@ -212,6 +526,46 @@ model ParcaBekleme {
   @@index([servisId])
   @@index([tamamlandi])
   @@map("parca_bekleme")
+}
+
+model ServiceNote {
+  id               String   @id @default(cuid())
+  organizationId   String   @default("org_default") @map("organization_id")
+  servisId         String   @map("servis_id")
+  metin            String   @db.Text
+  olusturanUserId  String?  @map("olusturan_user_id")
+  olusturanEmail   String?  @map("olusturan_email")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  servis           Service  @relation(fields: [servisId], references: [id], onDelete: Cascade)
+  olusturan        User?    @relation("ServiceNote_Olusturan", fields: [olusturanUserId], references: [id], onDelete: SetNull)
+
+  @@index([servisId, createdAt])
+  @@index([olusturanUserId])
+  @@map("servis_not")
+}
+
+model ServiceAttachment {
+  id               String   @id @default(cuid())
+  organizationId   String   @default("org_default") @map("organization_id")
+  servisId         String   @map("servis_id")
+  dosyaAdi         String   @map("dosya_adi")
+  mimeType         String   @map("mime_type")
+  dosyaBoyutu      Int      @map("dosya_boyutu")
+  icerik           Bytes
+  olusturanUserId  String?  @map("olusturan_user_id")
+  olusturanEmail   String?  @map("olusturan_email")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relations
+  servis           Service  @relation(fields: [servisId], references: [id], onDelete: Cascade)
+  olusturan        User?    @relation("ServiceAttachment_Olusturan", fields: [olusturanUserId], references: [id], onDelete: SetNull)
+
+  @@index([servisId, createdAt])
+  @@index([olusturanUserId])
+  @@map("servis_ek")
 }
 
 enum IsTuru {
@@ -604,6 +958,22 @@ model Konum {
 
   @@index([aktif, sirasi])
   @@map("konumlar")
+}
+
+model BlokajNedeni {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  durumKey    String   @map("durum_key")
+  sirasi      Int      @default(0)
+  aktif       Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([aktif, sirasi])
+  @@index([durumKey])
+  @@map("blokaj_nedenleri")
 }
 
 model PersonelUnvanAyar {

@@ -3,7 +3,10 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { otomatikYedekCalistir, sonrakiGunlukCalismaZamani } from '@/lib/backup/scheduler';
 
 type CronBackupIstekGovdesi = {
+  retentionModu?: 'daily_weekly' | 'legacy_days';
   retentionGun?: number;
+  gunlukYedekSayisi?: number;
+  haftalikYedekSayisi?: number;
   minimumYedekSayisi?: number;
 };
 
@@ -36,7 +39,10 @@ async function cronCalistir(
 
   try {
     const sonuc = await otomatikYedekCalistir({
+      retentionModu: govde.retentionModu,
       retentionGun: govde.retentionGun,
+      gunlukYedekSayisi: govde.gunlukYedekSayisi,
+      haftalikYedekSayisi: govde.haftalikYedekSayisi,
       minimumYedekSayisi: govde.minimumYedekSayisi,
     });
 
@@ -55,11 +61,20 @@ async function cronCalistir(
 }
 
 export async function GET(request: NextRequest) {
+  const retentionModu = new URL(request.url).searchParams.get('retentionModu');
   const retentionGun = Number(new URL(request.url).searchParams.get('retentionGun'));
+  const gunlukYedekSayisi = Number(new URL(request.url).searchParams.get('gunlukYedekSayisi'));
+  const haftalikYedekSayisi = Number(new URL(request.url).searchParams.get('haftalikYedekSayisi'));
   const minimumYedekSayisi = Number(new URL(request.url).searchParams.get('minimumYedekSayisi'));
 
   return cronCalistir(request, {
+    retentionModu:
+      retentionModu === 'daily_weekly' || retentionModu === 'legacy_days'
+        ? retentionModu
+        : undefined,
     retentionGun: Number.isFinite(retentionGun) ? retentionGun : undefined,
+    gunlukYedekSayisi: Number.isFinite(gunlukYedekSayisi) ? gunlukYedekSayisi : undefined,
+    haftalikYedekSayisi: Number.isFinite(haftalikYedekSayisi) ? haftalikYedekSayisi : undefined,
     minimumYedekSayisi: Number.isFinite(minimumYedekSayisi)
       ? minimumYedekSayisi
       : undefined,

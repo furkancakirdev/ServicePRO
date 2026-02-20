@@ -18,6 +18,8 @@
         "db:studio": "prisma studio",
         "db:seed": "tsx prisma/seed.ts",
         "db:reset": "prisma migrate reset",
+        "jobs:backfill-appointments": "tsx scripts/backfill-job-appointments.ts",
+        "jobs:backfill-appointments:dry": "tsx scripts/backfill-job-appointments.ts --dry-run",
         "sync:test": "node scripts/sync-test.js",
         "sync:cron": "node scripts/sync-test.js --auto",
         "sync:check": "node scripts/check-import.js",

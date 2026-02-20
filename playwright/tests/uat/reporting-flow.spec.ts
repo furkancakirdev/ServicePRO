@@ -12,5 +12,5 @@ test('Reporting workflow', async ({ page }) => {
 
   await page.goto('/raporlar/whatsapp');
   await expect(page.getByText('WhatsApp Teknik Ekip Sablonlari')).toBeVisible();
-  await expect(page.getByText('Onizleme')).toBeVisible();
+  await expect(page.getByTestId('whatsapp-template-editor')).toBeVisible();
 });

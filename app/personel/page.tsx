@@ -1,288 +1,267 @@
-﻿'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Personnel, UNVAN_CONFIG } from '@/types';
-import { fetchPersonnel } from '@/lib/api';
+import { Prisma, ServisDurumu } from '@prisma/client';
+import { Users } from 'lucide-react';
+import { PageContent } from '@/components/layout/page-content';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageEmptyState } from '@/components/ui/page-states';
+import { cn } from '@/lib/utils';
+import { prisma } from '@/lib/prisma';
 
-export default function PersonelPage() {
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
-  const [filter, setFilter] = useState<'tumu' | 'teknisyen' | 'yetkili'>('tumu');
-  const showInactive = false;
-  const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newPersonnel, setNewPersonnel] = useState({
-    ad: '',
-    unvan: 'cirak',
-  });
+type SearchParams = Record<string, string | string[] | undefined>;
+type RoleFilter = 'ALL' | 'TEKNISYEN' | 'YETKILI';
+type PersonelDurum = 'PASIF' | 'MUSAIT' | 'PLANLI' | 'YOGUN';
 
-  useEffect(() => {
-    loadPersonnel();
-  }, []);
+const PAGE_SIZE = 20;
+const CLOSED_STATUSES: ServisDurumu[] = [ServisDurumu.TAMAMLANDI, ServisDurumu.IPTAL];
 
-  const loadPersonnel = async () => {
-    try {
-      const data = await fetchPersonnel();
-      setPersonnel(data);
-    } catch (error) {
-      console.error('Failed to load personnel:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddPersonnel = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/personel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ad: newPersonnel.ad,
-          unvan: newPersonnel.unvan,
-          rol: 'teknisyen',
-          aktif: true,
-        }),
-      });
-
-      if (res.ok) {
-        setShowAddForm(false);
-        setNewPersonnel({ ad: '', unvan: 'cirak' });
-        loadPersonnel();
-      }
-    } catch (error) {
-      console.error('Failed to add personnel:', error);
-    }
-  };
-
-  const filteredPersonnel = personnel.filter((p) => {
-    if (!showInactive && !p.aktif) return false;
-    if (filter === 'tumu') return true;
-    return p.rol === filter;
-  });
-
-  const teknisyenler = filteredPersonnel.filter((p) => p.rol === 'teknisyen');
-  const yetkililer = filteredPersonnel.filter((p) => p.rol === 'yetkili');
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>Yükleniyor...</div>;
-  }
-
-  return (
-    <div className="animate-fade-in">
-      <header className="hero-panel mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="page-title">Personel Yönetimi</h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>{personnel.filter((p) => p.aktif).length} aktif personel</p>
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setFilter('tumu')}
-            className={filter === 'tumu' ? 'btn btn-primary' : 'btn btn-secondary'}
-          >
-            Tümü
-          </button>
-          <button
-            onClick={() => setFilter('teknisyen')}
-            className={filter === 'teknisyen' ? 'btn btn-primary' : 'btn btn-secondary'}
-          >
-            Teknisyenler
-          </button>
-          <button onClick={() => setShowAddForm(!showAddForm)} className="btn btn-primary">
-            {showAddForm ? 'İptal' : 'Yeni Personel'}
-          </button>
-        </div>
-      </header>
-
-      {showAddForm && (
-        <div className="card surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-          <h3 className="card-title">Yeni Personel Ekle</h3>
-          <form onSubmit={handleAddPersonnel}>
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 'var(--space-md)',
-                alignItems: 'end',
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: 'var(--space-xs)',
-                    fontSize: '0.85rem',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  Ad Soyad
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newPersonnel.ad}
-                  onChange={(e) => setNewPersonnel({ ...newPersonnel, ad: e.target.value })}
-                  placeholder="Örn: Mehmet Yılmaz"
-                  required
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: 'var(--space-xs)',
-                    fontSize: '0.85rem',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  Ünvan
-                </label>
-                <select
-                  className="form-select"
-                  value={newPersonnel.unvan}
-                  onChange={(e) => setNewPersonnel({ ...newPersonnel, unvan: e.target.value })}
-                  style={{ width: '100%' }}
-                >
-                  <option value="usta">Ustabaşı</option>
-                  <option value="cirak">Çırak</option>
-                </select>
-              </div>
-              <div>
-                <button type="submit" className="btn btn-success" style={{ width: '100%' }}>
-                  Ekle
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {(filter === 'tumu' || filter === 'teknisyen') && teknisyenler.length > 0 && (
-        <section style={{ marginBottom: 'var(--space-xl)' }}>
-          <h2 style={{ marginBottom: 'var(--space-md)', color: 'var(--color-text-muted)' }}>
-            Teknisyenler ({teknisyenler.length})
-          </h2>
-          <div className="grid grid-cols-3" style={{ gap: 'var(--space-md)' }}>
-            {teknisyenler.map((p) => (
-              <PersonelCard key={p.id} personel={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {(filter === 'tumu' || filter === 'yetkili') && yetkililer.length > 0 && (
-        <section>
-          <h2 style={{ marginBottom: 'var(--space-md)', color: 'var(--color-text-muted)' }}>
-            Yetkililer ({yetkililer.length})
-          </h2>
-          <div className="grid grid-cols-3" style={{ gap: 'var(--space-md)' }}>
-            {yetkililer.map((p) => (
-              <PersonelCard key={p.id} personel={p} isYetkili />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {teknisyenler.length === 0 && yetkililer.length === 0 && (
-        <div className="card surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>👥</div>
-          <h3>Henüz personel eklenmemiş</h3>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Yukarıdaki &quot;Yeni Personel&quot; butonunu kullanarak personel ekleyebilirsiniz.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+function asString(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
 }
 
-function PersonelCard({ personel, isYetkili = false }: { personel: Personnel; isYetkili?: boolean }) {
-  const unvanConfig = UNVAN_CONFIG[personel.unvan] || { icon: '👤', label: personel.unvan };
-  const toplamRozet = (personel.altinRozet || 0) + (personel.gumusRozet || 0) + (personel.bronzRozet || 0);
+function parsePage(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.floor(parsed);
+}
+
+function parseRole(value: string): RoleFilter {
+  const normalized = value.trim().toUpperCase();
+  if (normalized === 'TEKNISYEN') return 'TEKNISYEN';
+  if (normalized === 'YETKILI') return 'YETKILI';
+  return 'ALL';
+}
+
+function getPersonelDurum(aktif: boolean, aktifIsSayisi: number): PersonelDurum {
+  if (!aktif) return 'PASIF';
+  if (aktifIsSayisi <= 0) return 'MUSAIT';
+  if (aktifIsSayisi <= 2) return 'PLANLI';
+  return 'YOGUN';
+}
+
+function getDurumLabel(durum: PersonelDurum): string {
+  if (durum === 'PASIF') return 'Pasif';
+  if (durum === 'MUSAIT') return 'Musait';
+  if (durum === 'PLANLI') return 'Planli';
+  return 'Yogun';
+}
+
+function getDurumChipClass(durum: PersonelDurum): string {
+  if (durum === 'PASIF') return 'bg-muted text-muted-foreground border-border';
+  if (durum === 'MUSAIT') return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30';
+  if (durum === 'PLANLI') return 'bg-amber-500/10 text-amber-700 border-amber-500/30';
+  return 'bg-rose-500/10 text-rose-700 border-rose-500/30';
+}
+
+function getRoleLabel(rol: string): string {
+  return rol === 'yetkili' ? 'Yetkili' : 'Teknisyen';
+}
+
+function getUnvanLabel(unvan: string): string {
+  if (unvan === 'usta') return 'Usta';
+  if (unvan === 'yonetici') return 'Yonetici';
+  if (unvan === 'ofis') return 'Ofis';
+  return 'Cirak';
+}
+
+export default async function PersonnelPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const params = searchParams ?? {};
+  const query = asString(params.q).trim();
+  const page = parsePage(asString(params.page));
+  const roleFilter = parseRole(asString(params.rol));
+
+  const where: Prisma.PersonelWhereInput = {
+    deletedAt: null,
+  };
+
+  if (query) {
+    where.ad = {
+      contains: query,
+      mode: 'insensitive',
+    };
+  }
+
+  if (roleFilter !== 'ALL') {
+    where.rol = roleFilter === 'YETKILI' ? 'yetkili' : 'teknisyen';
+  }
+
+  const [total, personnel] = await Promise.all([
+    prisma.personel.count({ where }),
+    prisma.personel.findMany({
+      where,
+      orderBy: [{ aktif: 'desc' }, { ad: 'asc' }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        ad: true,
+        rol: true,
+        unvan: true,
+        aktif: true,
+      },
+    }),
+  ]);
+
+  const personnelIds = personnel.map((item) => item.id);
+  const openCountsRaw =
+    personnelIds.length > 0
+      ? await prisma.servicePersonel.groupBy({
+          by: ['personelId'],
+          where: {
+            personelId: { in: personnelIds },
+            servis: {
+              deletedAt: null,
+              durum: { notIn: CLOSED_STATUSES },
+            },
+          },
+          _count: { _all: true },
+        })
+      : [];
+
+  const openCountMap = new Map(
+    openCountsRaw.map((item) => [item.personelId, item._count._all])
+  );
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const baseQuery = new URLSearchParams();
+  if (query) baseQuery.set('q', query);
+  if (roleFilter !== 'ALL') baseQuery.set('rol', roleFilter);
+
+  const prevQuery = new URLSearchParams(baseQuery);
+  prevQuery.set('page', String(Math.max(1, page - 1)));
+  const nextQuery = new URLSearchParams(baseQuery);
+  nextQuery.set('page', String(Math.min(totalPages, page + 1)));
 
   return (
-    <Link
-      href={`/personel/${personel.id}`}
-      className="card surface-panel"
-      style={{
-        display: 'block',
-        textDecoration: 'none',
-        opacity: personel.aktif ? 1 : 0.5,
-        borderLeft: `4px solid ${isYetkili ? 'var(--color-accent-gold)' : 'var(--color-primary)'}`,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
-        <div
-          style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: 'var(--radius-full)',
-            background: isYetkili ? 'var(--color-accent-gold)' : 'var(--color-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.5rem',
-          }}
-        >
-          {unvanConfig.icon}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>{personel.ad}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-            {unvanConfig.label}
-            {!personel.aktif && ' • Pasif'}
+    <PageContent data-testid="personel-page">
+      <PageHeader
+        title="Personel"
+        description="Atama icin ekip yogunlugu ve acik is gorunumu"
+        breadcrumbs={[
+          { label: 'Operasyon', href: '/' },
+          { label: 'Personel' },
+        ]}
+        rightActions={
+          <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
+            + Yeni Is Emri
+          </Link>
+        }
+      />
+
+      <section className="surface-panel space-y-4 p-4">
+        <form className="grid gap-3 md:grid-cols-[1fr_220px_auto]" method="get">
+          <label className="relative block">
+            <Users className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="Personel ara"
+              className="form-input w-full pl-8"
+            />
+          </label>
+
+          <select name="rol" defaultValue={roleFilter} className="form-select w-full">
+            <option value="ALL">Tum Roller</option>
+            <option value="TEKNISYEN">Teknisyen</option>
+            <option value="YETKILI">Yetkili</option>
+          </select>
+
+          <button type="submit" className="btn btn-secondary h-10 px-4 py-2">
+            Filtrele
+          </button>
+        </form>
+
+        {personnel.length === 0 ? (
+          <PageEmptyState
+            title={query ? 'Aramaya uygun personel bulunamadi' : 'Personel kaydi bulunamadi'}
+            description="Filtreleri temizleyip tekrar deneyebilirsiniz."
+            action={
+              <Link href="/personel" className="btn btn-secondary h-9 px-4 py-2">
+                Filtreleri Temizle
+              </Link>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] border-collapse">
+              <thead>
+                <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-3">Isim</th>
+                  <th className="px-3 py-3">Rol</th>
+                  <th className="px-3 py-3">Acik Is Sayisi</th>
+                  <th className="px-3 py-3">Guncel Durum</th>
+                  <th className="px-3 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {personnel.map((item) => {
+                  const openCount = openCountMap.get(item.id) ?? 0;
+                  const durum = getPersonelDurum(item.aktif, openCount);
+                  return (
+                    <tr
+                      key={item.id}
+                      className="border-b border-border/60 text-sm text-foreground last:border-b-0"
+                      data-testid={`personel-row-${item.id}`}
+                    >
+                      <td className="px-3 py-3">
+                        <p className="font-medium">{item.ad}</p>
+                        <p className="text-xs text-muted-foreground">{getUnvanLabel(item.unvan)}</p>
+                      </td>
+                      <td className="px-3 py-3">{getRoleLabel(item.rol)}</td>
+                      <td className="px-3 py-3">
+                        <span className="chip">{openCount}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                            getDurumChipClass(durum)
+                          )}
+                        >
+                          {getDurumLabel(durum)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Link
+                          href={`/personel/${item.id}`}
+                          className="btn btn-secondary h-8 px-3 py-1 text-xs"
+                          data-testid={`personel-open-profile-${item.id}`}
+                        >
+                          Profili Ac
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <p className="text-muted-foreground">
+            Toplam {total} kayit - Sayfa {page} / {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/personel?${prevQuery.toString()}`}
+              className={`btn btn-secondary h-9 px-3 py-2 ${page <= 1 ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              Onceki
+            </Link>
+            <Link
+              href={`/personel?${nextQuery.toString()}`}
+              className={`btn btn-secondary h-9 px-3 py-2 ${page >= totalPages ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              Sonraki
+            </Link>
           </div>
         </div>
-      </div>
-
-      {!isYetkili && (
-        <>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 'var(--space-sm)',
-              marginBottom: 'var(--space-md)',
-            }}
-          >
-            <div
-              style={{
-                padding: 'var(--space-sm)',
-                background: 'var(--color-bg)',
-                borderRadius: 'var(--radius-sm)',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                {personel.aylikServisSayisi || 0}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>servis/ay</div>
-            </div>
-            <div
-              style={{
-                padding: 'var(--space-sm)',
-                background: 'var(--color-bg)',
-                borderRadius: 'var(--radius-sm)',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-success)' }}>
-                {personel.aylikOrtalamaPuan || 0}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>puan</div>
-            </div>
-          </div>
-
-          {toplamRozet > 0 && (
-            <div style={{ display: 'flex', gap: 'var(--space-xs)', justifyContent: 'center' }}>
-              {(personel.altinRozet || 0) > 0 && <span title="Altın Rozet">Altın ×{personel.altinRozet}</span>}
-              {(personel.gumusRozet || 0) > 0 && <span title="Gümüş Rozet">Gümüş ×{personel.gumusRozet}</span>}
-              {(personel.bronzRozet || 0) > 0 && <span title="Bronz Rozet">Bronz ×{personel.bronzRozet}</span>}
-            </div>
-          )}
-        </>
-      )}
-    </Link>
+      </section>
+    </PageContent>
   );
 }

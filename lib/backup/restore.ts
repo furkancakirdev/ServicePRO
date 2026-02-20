@@ -209,7 +209,7 @@ export async function yedektenGeriYukle(
 
       tabloBazliKayitSayilari[model.name] = eklenenKayit;
     }
-  });
+  }, { maxWait: 10000, timeout: 180000 });
 
   const restoreEdilenTablolar = Object.keys(tabloBazliKayitSayilari);
   const restoreEdilenKayitSayisi = Object.values(tabloBazliKayitSayilari).reduce(

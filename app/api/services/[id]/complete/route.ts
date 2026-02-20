@@ -34,10 +34,16 @@ const completeRequestSchema = z.object({
   zorlukOverride: z.enum(['RUTIN', 'ARIZA', 'PROJE']).optional(),
 });
 
-const ZORLUK_CARPANLARI: Record<string, number> = {
+const ZORLUK_CARPANLARI: Record<'RUTIN' | 'ARIZA' | 'PROJE', number> = {
   RUTIN: 1.0,
   ARIZA: 1.2,
   PROJE: 1.5,
+};
+
+const ZORLUK_IS_TURU_ESLEME: Record<'RUTIN' | 'ARIZA' | 'PROJE', 'PAKET' | 'ARIZA' | 'PROJE'> = {
+  RUTIN: 'PAKET',
+  ARIZA: 'ARIZA',
+  PROJE: 'PROJE',
 };
 
 function mapIsTuruToZorluk(isTuru: string): 'RUTIN' | 'ARIZA' | 'PROJE' {
@@ -119,7 +125,13 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const zorlukSeviyesi = body.zorlukOverride ?? mapIsTuruToZorluk(service.isTuru);
-    const zorlukCarpani = ZORLUK_CARPANLARI[zorlukSeviyesi] ?? 1.0;
+    const zorlukIsTuru = ZORLUK_IS_TURU_ESLEME[zorlukSeviyesi];
+    const aktifKatsayi = await prisma.zorlukKatsayi.findUnique({
+      where: { isTuru: zorlukIsTuru },
+      select: { id: true, carpan: true },
+    });
+    const zorlukCarpani = aktifKatsayi?.carpan ?? ZORLUK_CARPANLARI[zorlukSeviyesi];
+    const savedMultiplierId = aktifKatsayi?.id ?? null;
     const raporBasarisi = hesaplaKalitePuani(body.kaliteKontrol);
     const uniteSaatiExcluded = isUniteSaatiExcluded(body.kaliteKontrol);
     const adamSaatExcluded = isAdamSaatExcluded(body.kaliteKontrol);
@@ -182,6 +194,7 @@ export async function POST(request: Request, { params }: RouteContext) {
             zorlukCarpani,
             finalPuan: puan.finalPuan,
             bonus: bonusSet.has(personel.personelId),
+            savedMultiplierId,
             notlar: JSON.stringify({
               kaliteKontrol: {
                 ...body.kaliteKontrol,
@@ -248,7 +261,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       });
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      scoring: {
+        zorlukSeviyesi,
+        zorlukCarpani,
+        savedMultiplierId,
+      },
+    });
   } catch (error) {
     console.error('Service complete error:', error);
     return NextResponse.json({ error: 'İşlem başarısız' }, { status: 500 });

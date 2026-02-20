@@ -1,16 +1,20 @@
 ﻿import Link from 'next/link';
 import { Prisma, ServisDurumu } from '@prisma/client';
-import { CalendarDays, Filter, Ship } from 'lucide-react';
+import { CalendarDays, Filter } from 'lucide-react';
 import { MinimumRole } from '@/components/auth/ProtectedComponents';
+import { PageContent } from '@/components/layout/page-content';
+import { PageHeader } from '@/components/layout/page-header';
 import { serviceColumns } from '@/components/services/columns';
 import { DataTable } from '@/components/services/data-table';
+import { PageEmptyState } from '@/components/ui/page-states';
 import {
   ACTIVE_STATUS_VALUES,
   DEFAULT_STATUS_FILTERS,
   DataGridViewMode,
-  LOKASYON_FILTER_OPTIONS,
+  PriorityLevel,
   ServiceGridInitialState,
   ServiceGridRow,
+  ServiceGridServerPagination,
 } from '@/components/services/types';
 import { createUtcDayRange, parseDateOnlyToUtcDate } from '@/lib/date-utils';
 import {
@@ -23,8 +27,24 @@ import { prisma } from '@/lib/prisma';
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
+const IN_PROGRESS_DB_STATUS = normalizeServisDurumuForDb('DEVAM_EDIYOR') as ServisDurumu;
+
 function parseViewMode(): DataGridViewMode {
   return 'list';
+}
+
+function parsePositiveIntParam(value: string | string[] | undefined): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return null;
+  return parsed;
+}
+
+function resolvePageSize(rawLimit: number | null): number {
+  const allowed = new Set([10, 25, 50, 100]);
+  if (!rawLimit) return 25;
+  return allowed.has(rawLimit) ? rawLimit : 25;
 }
 
 function parseDateKeys(rawValues: string[]): string[] {
@@ -60,12 +80,25 @@ function parseStatusFilters(rawValues: string[]): { db: ServisDurumu[]; app: str
 }
 
 function buildServiceWhereClause({
+  search,
+  lokasyonGroups,
+  dateFrom,
+  dateTo,
+  technicians,
+  blockingReasons,
   statusFilters,
   dateKeys,
 }: {
+  search: string;
+  lokasyonGroups: string[];
+  dateFrom?: string;
+  dateTo?: string;
+  technicians: string[];
+  blockingReasons: string[];
   statusFilters: ServisDurumu[];
   dateKeys: string[];
 }): Prisma.ServiceWhereInput {
+  const andFilters: Prisma.ServiceWhereInput[] = [];
   const where: Prisma.ServiceWhereInput = {
     deletedAt: null,
     NOT: {
@@ -76,16 +109,39 @@ function buildServiceWhereClause({
   };
 
   if (statusFilters.length > 0) {
-    where.durum = { in: statusFilters };
+    andFilters.push({ durum: { in: statusFilters } });
+  }
+
+  if (search.trim()) {
+    andFilters.push({
+      OR: [
+        { tekneAdi: { contains: search.trim(), mode: 'insensitive' } },
+        { servisAciklamasi: { contains: search.trim(), mode: 'insensitive' } },
+        { adres: { contains: search.trim(), mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  if (lokasyonGroups.length > 0) {
+    andFilters.push({
+      OR: lokasyonGroups.map((value) => ({
+        OR: [
+          { yer: { contains: value, mode: 'insensitive' } },
+          { adres: { contains: value, mode: 'insensitive' } },
+        ],
+      })),
+    });
   }
 
   if (dateKeys.length === 1) {
     const range = createUtcDayRange(dateKeys[0]);
     if (range) {
-      where.tarih = {
-        gte: range.start,
-        lte: range.end,
-      };
+      andFilters.push({
+        tarih: {
+          gte: range.start,
+          lte: range.end,
+        },
+      });
     }
   } else if (dateKeys.length > 1) {
     const dateOr: Prisma.ServiceWhereInput[] = [];
@@ -102,11 +158,91 @@ function buildServiceWhereClause({
     }
 
     if (dateOr.length > 0) {
-      where.OR = dateOr;
+      andFilters.push({ OR: dateOr });
     }
   }
 
+  if (dateKeys.length === 0 && (dateFrom || dateTo)) {
+    const dateRange: Prisma.DateTimeFilter = {};
+    if (dateFrom) {
+      const fromRange = createUtcDayRange(dateFrom);
+      if (fromRange) dateRange.gte = fromRange.start;
+    }
+    if (dateTo) {
+      const toRange = createUtcDayRange(dateTo);
+      if (toRange) dateRange.lte = toRange.end;
+    }
+    if (dateRange.gte || dateRange.lte) {
+      andFilters.push({ tarih: dateRange });
+    }
+  }
+
+  if (technicians.length > 0) {
+    andFilters.push({
+      personeller: {
+        some: {
+          personel: {
+            ad: {
+              in: technicians,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  if (blockingReasons.length > 0) {
+    andFilters.push({
+      OR: blockingReasons.map((reason) => ({
+        taseronNotlari: {
+          contains: reason,
+          mode: 'insensitive',
+        },
+      })),
+    });
+  }
+
+  if (andFilters.length > 0) {
+    where.AND = andFilters;
+  }
+
   return where;
+}
+
+function resolvePriority(service: {
+  durum: ServisDurumu;
+  tarih: Date | null;
+  tahminiBitisTarihi: Date | null;
+}): PriorityLevel {
+  const dueDate = service.tahminiBitisTarihi ?? service.tarih;
+  const now = Date.now();
+  const dueTime = dueDate ? dueDate.getTime() : null;
+  const isOverdue = dueTime !== null && dueTime < now;
+  if (isOverdue) return 'YUKSEK';
+  if (service.durum === ServisDurumu.PARCA_BEKLIYOR || service.durum === ServisDurumu.MUSTERI_ONAY_BEKLIYOR) {
+    return 'YUKSEK';
+  }
+  if (service.durum === IN_PROGRESS_DB_STATUS || service.durum === ServisDurumu.RANDEVU_VERILDI) {
+    return 'ORTA';
+  }
+  return 'DUSUK';
+}
+
+function resolveBlockingReason(service: {
+  durum: ServisDurumu;
+  taseronNotlari: string | null;
+}): string | null {
+  const note = service.taseronNotlari?.trim() ?? '';
+  if (note.toUpperCase().startsWith('BLOKAJ:')) {
+    const line = note.split('\n')[0] ?? '';
+    return line.replace(/^BLOKAJ:\s*/i, '').trim() || null;
+  }
+
+  if (service.durum === ServisDurumu.PARCA_BEKLIYOR) return 'Parca Bekliyor';
+  if (service.durum === ServisDurumu.MUSTERI_ONAY_BEKLIYOR) return 'Onay Bekliyor';
+  if (service.durum === ServisDurumu.RAPOR_BEKLIYOR) return 'Rapor Bekliyor';
+  if (service.durum === ServisDurumu.ERTELENDI) return 'Ertelendi';
+  return null;
 }
 
 function mapServiceToGridRow(service: {
@@ -122,12 +258,21 @@ function mapServiceToGridRow(service: {
   telefon: string | null;
   durum: ServisDurumu;
   isTuru: string;
+  taseronNotlari: string | null;
   createdAt: Date;
+  personeller: Array<{
+    personel: {
+      ad: string;
+    };
+  }>;
   _count: {
     personeller: number;
   };
 }): ServiceGridRow {
   const tarihKey = service.tarih ? service.tarih.toISOString().slice(0, 10) : '';
+  const atananTeknisyenler = service.personeller
+    .map((item) => item.personel.ad.trim())
+    .filter(Boolean);
 
   return {
     id: service.id,
@@ -143,6 +288,9 @@ function mapServiceToGridRow(service: {
     irtibatKisi: service.irtibatKisi,
     telefon: service.telefon,
     durum: normalizeServisDurumuForApp(service.durum),
+    oncelik: resolvePriority(service),
+    blokajNedeni: resolveBlockingReason(service),
+    atananTeknisyenler,
     personelSayisi: service._count.personeller,
     isTuru: service.isTuru,
     createdAt: service.createdAt.toISOString(),
@@ -155,11 +303,20 @@ export default async function ServicesPage({
   searchParams?: SearchParams;
 }) {
   const params = searchParams ?? {};
+  const requestedPage = parsePositiveIntParam(params.page) ?? 1;
+  const pageSize = resolvePageSize(parsePositiveIntParam(params.limit));
   const parsedFilterState = parseServisFilterStateFromSearchParams(params);
   const search = parsedFilterState.tekneAdi ?? '';
   const statusRawValues = parsedFilterState.durum ?? [];
   const dateRawValues = parsedFilterState.tarih ?? [];
   const lokasyonRawValues = parsedFilterState.konum ?? [];
+  const dateFrom = parsedFilterState.dateFrom ?? '';
+  const dateTo = parsedFilterState.dateTo ?? '';
+  const technicians = parsedFilterState.teknisyen ?? [];
+  const priorities = (parsedFilterState.oncelik ?? []).filter(
+    (value): value is PriorityLevel => value === 'YUKSEK' || value === 'ORTA' || value === 'DUSUK'
+  );
+  const blockingReasons = parsedFilterState.blokaj ?? [];
   const queueFilter = parsedFilterState.queue ?? 'ALL';
 
   const parsedStatuses = parseStatusFilters(statusRawValues);
@@ -172,15 +329,13 @@ export default async function ServicesPage({
     .map((status) => normalizeServisDurumuForDb(status))
     .filter((status): status is ServisDurumu => enumSet.has(status as ServisDurumu));
   const effectiveDbStatuses = parsedStatuses.db;
-  const inProgressDbStatus = normalizeServisDurumuForDb('DEVAM_EDIYOR') as ServisDurumu;
+  const inProgressDbStatus = IN_PROGRESS_DB_STATUS;
 
   const selectedLokasyonGroups = Array.from(
     new Set(
       lokasyonRawValues
-        .map((value) => value.toUpperCase())
-        .filter((value): value is ServiceGridRow['lokasyonGroup'] =>
-          LOKASYON_FILTER_OPTIONS.some((option) => option.value === value)
-        )
+        .map((value) => value.trim())
+        .filter(Boolean)
     )
   );
 
@@ -192,12 +347,28 @@ export default async function ServicesPage({
     queueFilter,
     viewMode: parseViewMode(),
     groupBy: parsedFilterState.groupBy ?? 'none',
+    dateFrom,
+    dateTo,
+    technicians,
+    priorities,
+    blockingReasons,
   };
 
   const where = buildServiceWhereClause({
+    search,
+    lokasyonGroups: selectedLokasyonGroups,
+    dateFrom,
+    dateTo,
+    technicians,
+    blockingReasons,
     statusFilters: effectiveDbStatuses,
     dateKeys,
   });
+
+  const filteredTotalCount = await prisma.service.count({ where });
+  const totalPages = Math.max(1, Math.ceil(filteredTotalCount / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const skip = (currentPage - 1) * pageSize;
 
   const [services, defaultViewCount, unscheduledByStatusRaw, activeCount, plannedCount, waitingCount, lastSyncLog] = await Promise.all([
     prisma.service.findMany({
@@ -215,15 +386,26 @@ export default async function ServicesPage({
         telefon: true,
         durum: true,
         isTuru: true,
+        taseronNotlari: true,
         createdAt: true,
+        personeller: {
+          select: {
+            personel: {
+              select: {
+                ad: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             personeller: true,
           },
         },
       },
-      orderBy: [{ tarih: 'desc' }, { createdAt: 'desc' }],
-      take: 2500,
+      orderBy: [{ createdAt: 'desc' }, { tarih: 'desc' }],
+      skip,
+      take: pageSize,
     }),
     prisma.service.count({
       where: {
@@ -270,6 +452,12 @@ export default async function ServicesPage({
   ]);
 
   const rows = services.map(mapServiceToGridRow);
+  const serverPagination: ServiceGridServerPagination = {
+    page: currentPage,
+    limit: pageSize,
+    total: filteredTotalCount,
+    totalPages,
+  };
   const unscheduledByStatus = unscheduledByStatusRaw
     .map((item) => ({
       status: normalizeServisDurumuForApp(item.durum),
@@ -287,24 +475,37 @@ export default async function ServicesPage({
     statusRawValues.length > 0 ||
     selectedLokasyonGroups.length > 0 ||
     dateRawValues.length > 0 ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo) ||
+    technicians.length > 0 ||
+    priorities.length > 0 ||
+    blockingReasons.length > 0 ||
     queueFilter !== 'ALL';
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-6 lg:px-6" data-testid="servisler-page">
-      <section className="hero-panel">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <Ship className="h-6 w-6 text-[var(--color-primary-light)]" />
-              Servisler
-            </h1>
-            <p className="page-subtitle mt-1">
-              Arama, filtreleme ve durum takibini tek ekranda yonetin
-            </p>
-          </div>
+    <PageContent data-testid="servisler-page">
+      <PageHeader
+        title="Is Emirleri"
+        description="Arama, filtre ve durum yonetimi"
+        breadcrumbs={[
+          { label: 'Operasyon', href: '/' },
+          { label: 'Is Emirleri' },
+        ]}
+        rightActions={
+          <MinimumRole minimumRole="YETKILI">
+            <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
+              + Yeni Servis
+            </Link>
+          </MinimumRole>
+        }
+      >
+        <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="chip" data-testid="toplam-kayit-sayisi">
-              <CalendarDays className="h-4 w-4" /> Toplam {rows.length} kayıt
+              <CalendarDays className="h-4 w-4" /> Toplam {serverPagination.total} kayıt
+            </span>
+            <span className="chip" data-testid="sayfa-kayit-sayisi">
+              Bu sayfa: {rows.length} kayıt (Sayfa {serverPagination.page}/{serverPagination.totalPages})
             </span>
             <span className="chip" data-testid="varsayilan-gorunum-sayisi">
               Varsayilan gorunumdeki isler: {defaultViewCount}
@@ -321,74 +522,69 @@ export default async function ServicesPage({
             <span className="chip" data-testid="tarihsiz-isler-sayisi">
               Tarihsiz isler: {unscheduledTotal}
             </span>
-            <span className="chip" data-testid="sync-saglik-durumu">
+            <span
+              className="chip"
+              data-testid="sync-saglik-durumu"
+              title="Son senkron sonucunu ve dakikaya gore gecikme bilgisini gosterir"
+            >
               Sync: {lastSyncLog ? `${lastSyncLog.status} (${syncMinutesAgo} dk once)` : 'Kayıt yok'}{' '}
               {syncHealthy ? '• Saglikli' : '• Gecikmeli'}
             </span>
-            <span className="chip">
-              <Filter className="h-4 w-4" /> Inline filtreler aktif
+            <span className="chip" title="Ek filtreler icin Filtreler panelini acin">
+              <Filter className="h-4 w-4" /> Hizli filtreler aktif
             </span>
           </div>
+
+          <div className="flex flex-wrap items-center gap-2" data-testid="tarihsiz-durum-ozeti">
+            {unscheduledByStatus.length === 0 ? (
+              <span className="chip">Tarihsiz kayıt yok</span>
+            ) : (
+              unscheduledByStatus.map((item) => (
+                <Link
+                  key={item.status}
+                  href={`/servisler?queue=UNSCHEDULED&durum=${encodeURIComponent(item.status)}`}
+                  className="chip transition hover:border-[var(--color-primary)]/70 hover:text-[var(--color-primary)]"
+                  title="Bu duruma ait tarihsiz servisleri filtrele"
+                >
+                  {item.status}: {item.count}
+                </Link>
+              ))
+            )}
+          </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="tarihsiz-durum-ozeti">
-          {unscheduledByStatus.length === 0 ? (
-            <span className="chip">Tarihsiz kayıt yok</span>
+      </PageHeader>
+
+      <section className="surface-panel overflow-hidden" data-testid="servisler-filtre-detay">
+        <div className="space-y-4 p-4">
+          {rows.length === 0 ? (
+            <PageEmptyState
+              title={hasAnyInitialFilter ? 'Filtreye uygun is emri bulunamadi' : 'Henuz is emri bulunmuyor'}
+              description={hasAnyInitialFilter ? 'Filtreleri temizleyip tekrar deneyin.' : 'Ilk kaydi ekleyerek baslayin.'}
+              action={
+                <>
+                  {hasAnyInitialFilter ? (
+                    <Link href="/servisler" className="btn btn-secondary h-9 px-4 py-2">
+                      Filtreleri Temizle
+                    </Link>
+                  ) : null}
+                  <MinimumRole minimumRole="YETKILI">
+                    <Link href="/servisler/yeni" className="btn btn-primary h-9 px-4 py-2">
+                      + Yeni Is Emri
+                    </Link>
+                  </MinimumRole>
+                </>
+              }
+            />
           ) : (
-            unscheduledByStatus.map((item) => (
-              <Link
-                key={item.status}
-                href={`/servisler?queue=UNSCHEDULED&durum=${encodeURIComponent(item.status)}`}
-                className="chip transition hover:border-[var(--color-primary)]/70 hover:text-[var(--color-primary)]"
-                title="Bu duruma ait tarihsiz servisleri filtrele"
-              >
-                {item.status}: {item.count}
-              </Link>
-            ))
+            <DataTable
+              columns={serviceColumns}
+              data={rows}
+              initialState={initialState}
+              serverPagination={serverPagination}
+            />
           )}
         </div>
       </section>
-
-      <div className="flex items-center justify-end">
-        <MinimumRole minimumRole="YETKILI">
-          <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
-            + Yeni Servis
-          </Link>
-        </MinimumRole>
-      </div>
-
-      <details className="surface-panel overflow-hidden" open data-testid="servisler-filtre-detay">
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-foreground">
-          Filtreler ve Arama
-        </summary>
-        <div className="space-y-4 border-t border-[var(--color-border)]/60 p-4">
-          {rows.length === 0 ? (
-            <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[var(--color-border)]/70 bg-[var(--color-surface)]/20 p-8 text-center">
-              <p className="text-base font-semibold text-foreground">
-                {hasAnyInitialFilter ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz servis kaydı yok'}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {hasAnyInitialFilter
-                  ? 'Filtreleri temizleyip tekrar deneyin.'
-                  : 'İlk servis kaydınızı oluşturarak başlayın.'}
-              </p>
-              <div className="flex items-center gap-2">
-                {hasAnyInitialFilter && (
-                  <Link href="/servisler" className="btn btn-secondary h-9 px-4 py-2">
-                    Filtreleri Temizle
-                  </Link>
-                )}
-                <MinimumRole minimumRole="YETKILI">
-                  <Link href="/servisler/yeni" className="btn btn-primary h-9 px-4 py-2">
-                    + Yeni Servis
-                  </Link>
-                </MinimumRole>
-              </div>
-            </div>
-          ) : (
-            <DataTable columns={serviceColumns} data={rows} initialState={initialState} />
-          )}
-        </div>
-      </details>
-    </div>
+    </PageContent>
   );
 }

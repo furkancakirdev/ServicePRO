@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { ServisDurumu } from '@prisma/client';
 import { mapRolToDb, mapUnvanToApi, mapUnvanToDb } from '@/lib/personel-mappers';
+
+type PersonelDurum = 'PASIF' | 'MUSAIT' | 'PLANLI' | 'YOGUN';
+const CLOSED_STATUSES: ServisDurumu[] = [ServisDurumu.TAMAMLANDI, ServisDurumu.IPTAL];
+
+function getPersonelDurum(aktif: boolean, aktifIsSayisi: number): PersonelDurum {
+  if (!aktif) return 'PASIF';
+  if (aktifIsSayisi <= 0) return 'MUSAIT';
+  if (aktifIsSayisi <= 2) return 'PLANLI';
+  return 'YOGUN';
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,15 +35,40 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const personelIds = personeller.map((item) => item.id);
+    const aktifIsSayilari =
+      personelIds.length > 0
+        ? await prisma.servicePersonel.groupBy({
+            by: ['personelId'],
+            where: {
+              personelId: { in: personelIds },
+              servis: {
+                deletedAt: null,
+                durum: { notIn: CLOSED_STATUSES },
+              },
+            },
+            _count: { _all: true },
+          })
+        : [];
+
+    const aktifIsMap = new Map(
+      aktifIsSayilari.map((item) => [item.personelId, item._count._all])
+    );
+
     return NextResponse.json(
-      personeller.map((p) => ({
-        id: p.id,
-        ad: p.ad,
-        rol: p.rol,
-        unvan: mapUnvanToApi(p.unvan),
-        aktif: p.aktif,
-        girisYili: p.girisYili,
-      })),
+      personeller.map((p) => {
+        const aktifIsSayisi = aktifIsMap.get(p.id) ?? 0;
+        return {
+          id: p.id,
+          ad: p.ad,
+          rol: p.rol,
+          unvan: mapUnvanToApi(p.unvan),
+          aktif: p.aktif,
+          girisYili: p.girisYili,
+          aktifIsSayisi,
+          guncelDurum: getPersonelDurum(p.aktif, aktifIsSayisi),
+        };
+      }),
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',

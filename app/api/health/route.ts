@@ -4,13 +4,18 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const now = new Date().toISOString();
+  const version = process.env.APP_VERSION || process.env.npm_package_version || 'unknown';
+
   try {
     await prisma.$queryRaw`SELECT 1`;
 
     return NextResponse.json({
       status: 'ok',
       db: 'ok',
-      checkedAt: new Date().toISOString(),
+      version,
+      time: now,
+      checkedAt: now,
     });
   } catch (error) {
     console.error('GET /api/health error:', error);
@@ -18,7 +23,9 @@ export async function GET() {
       {
         status: 'error',
         db: 'down',
-        checkedAt: new Date().toISOString(),
+        version,
+        time: now,
+        checkedAt: now,
       },
       { status: 503 }
     );

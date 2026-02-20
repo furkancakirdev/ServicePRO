@@ -220,106 +220,289 @@ async function main() {
     return;
   }
 
-  // Sample servisler
-  const servis1 = await prisma.service.upsert({
-    where: { id: 'servis-1' },
-    update: {},
-    create: {
+  // Sample servisler (Job alias backlog foundation): minimum 10 kayit
+  const now = new Date();
+  const serviceSeedRows: Array<{
+    id: string;
+    tekneId: string;
+    tekneAdi: string;
+    isTuru: 'PAKET' | 'ARIZA' | 'PROJE';
+    durum:
+      | 'RANDEVU_VERILDI'
+      | 'DEVAM_EDİYOR'
+      | 'PARCA_BEKLIYOR'
+      | 'MUSTERI_ONAY_BEKLIYOR'
+      | 'TAMAMLANDI';
+    offsetDays: number;
+    saat: string;
+    servisAciklamasi: string;
+    adres: string;
+    yer: string;
+    telefon: string;
+    sorumluPersonelId: string;
+  }> = [
+    {
       id: 'servis-1',
       tekneId: tekne1.id,
       tekneAdi: tekne1.ad,
       isTuru: 'PAKET',
       durum: 'DEVAM_EDİYOR',
-      tarih: new Date(),
+      offsetDays: 0,
+      saat: '09:00',
       servisAciklamasi: 'Rutin bakım kontrolü',
-      adres: 'Marina A, Blok 1',
+      adres: 'Yatmarin A Blok 1',
       yer: 'Yatmarin',
       telefon: '555-9999',
-      ofisYetkiliId: admin.id,
+      sorumluPersonelId: personel1.id,
     },
-  });
-
-  await prisma.servicePersonel.upsert({
-    where: {
-      servisId_personelId: {
-        servisId: servis1.id,
-        personelId: personel1.id,
-      },
-    },
-    update: {},
-    create: {
-      servisId: servis1.id,
-      personelId: personel1.id,
-      rol: 'SORUMLU',
-    },
-  });
-
-  const servis2 = await prisma.service.upsert({
-    where: { id: 'servis-2' },
-    update: {},
-    create: {
+    {
       id: 'servis-2',
       tekneId: tekne2.id,
       tekneAdi: tekne2.ad,
       isTuru: 'ARIZA',
       durum: 'RANDEVU_VERILDI',
-      tarih: new Date(Date.now() - 86400000),
+      offsetDays: -1,
+      saat: '10:30',
       servisAciklamasi: 'Motor onarımı',
-      adres: 'Marina B, Blok 2',
+      adres: 'Netsel B Blok 2',
       yer: 'Netsel',
       telefon: '555-8888',
-      ofisYetkiliId: admin.id,
+      sorumluPersonelId: personel2.id,
     },
-  });
-
-  await prisma.servicePersonel.upsert({
-    where: {
-      servisId_personelId: {
-        servisId: servis2.id,
-        personelId: personel2.id,
-      },
-    },
-    update: {},
-    create: {
-      servisId: servis2.id,
-      personelId: personel2.id,
-      rol: 'SORUMLU',
-    },
-  });
-
-  const servis3 = await prisma.service.upsert({
-    where: { id: 'servis-3' },
-    update: {},
-    create: {
+    {
       id: 'servis-3',
       tekneId: tekne1.id,
       tekneAdi: tekne1.ad,
       isTuru: 'PROJE',
       durum: 'TAMAMLANDI',
-      tarih: new Date(Date.now() - 172800000),
+      offsetDays: -2,
+      saat: '08:30',
       servisAciklamasi: 'Yazlık yükleme',
-      adres: 'Marina A, Blok 1',
+      adres: 'Yatmarin A Blok 1',
       yer: 'Yatmarin',
       telefon: '555-7777',
-      ofisYetkiliId: admin.id,
+      sorumluPersonelId: personel2.id,
     },
-  });
+    {
+      id: 'servis-4',
+      tekneId: tekne2.id,
+      tekneAdi: tekne2.ad,
+      isTuru: 'PAKET',
+      durum: 'RANDEVU_VERILDI',
+      offsetDays: 1,
+      saat: '11:00',
+      servisAciklamasi: 'Klima sezon bakımı',
+      adres: 'Yatmarin C Iskele 4',
+      yer: 'Yatmarin',
+      telefon: '555-1004',
+      sorumluPersonelId: personel1.id,
+    },
+    {
+      id: 'servis-5',
+      tekneId: tekne1.id,
+      tekneAdi: tekne1.ad,
+      isTuru: 'ARIZA',
+      durum: 'PARCA_BEKLIYOR',
+      offsetDays: 2,
+      saat: '13:30',
+      servisAciklamasi: 'Elektrik arıza tespiti',
+      adres: 'Netsel D Iskele 2',
+      yer: 'Netsel',
+      telefon: '555-1005',
+      sorumluPersonelId: personel2.id,
+    },
+    {
+      id: 'servis-6',
+      tekneId: tekne2.id,
+      tekneAdi: tekne2.ad,
+      isTuru: 'PROJE',
+      durum: 'MUSTERI_ONAY_BEKLIYOR',
+      offsetDays: 3,
+      saat: '15:00',
+      servisAciklamasi: 'Jeneratör revizyon teklifi',
+      adres: 'Dis Servis Marmaris Merkez',
+      yer: 'Dis Servis',
+      telefon: '555-1006',
+      sorumluPersonelId: personel1.id,
+    },
+    {
+      id: 'servis-7',
+      tekneId: tekne1.id,
+      tekneAdi: tekne1.ad,
+      isTuru: 'PAKET',
+      durum: 'RANDEVU_VERILDI',
+      offsetDays: 4,
+      saat: '09:15',
+      servisAciklamasi: 'Periyodik bakım seti',
+      adres: 'Yatmarin B Iskele 1',
+      yer: 'Yatmarin',
+      telefon: '555-1007',
+      sorumluPersonelId: personel2.id,
+    },
+    {
+      id: 'servis-8',
+      tekneId: tekne2.id,
+      tekneAdi: tekne2.ad,
+      isTuru: 'ARIZA',
+      durum: 'DEVAM_EDİYOR',
+      offsetDays: -3,
+      saat: '14:45',
+      servisAciklamasi: 'Hidrolik pompa bakımı',
+      adres: 'Netsel E Iskele 8',
+      yer: 'Netsel',
+      telefon: '555-1008',
+      sorumluPersonelId: personel1.id,
+    },
+    {
+      id: 'servis-9',
+      tekneId: tekne1.id,
+      tekneAdi: tekne1.ad,
+      isTuru: 'PROJE',
+      durum: 'RANDEVU_VERILDI',
+      offsetDays: 5,
+      saat: '12:15',
+      servisAciklamasi: 'Yeni ekipman montajı',
+      adres: 'Dis Servis Bozburun',
+      yer: 'Dis Servis',
+      telefon: '555-1009',
+      sorumluPersonelId: personel2.id,
+    },
+    {
+      id: 'servis-10',
+      tekneId: tekne2.id,
+      tekneAdi: tekne2.ad,
+      isTuru: 'PAKET',
+      durum: 'RANDEVU_VERILDI',
+      offsetDays: 6,
+      saat: '16:00',
+      servisAciklamasi: 'Yaz sonu genel bakım',
+      adres: 'Yatmarin F Iskele 6',
+      yer: 'Yatmarin',
+      telefon: '555-1010',
+      sorumluPersonelId: personel1.id,
+    },
+  ];
 
-  await prisma.servicePersonel.upsert({
-    where: {
-      servisId_personelId: {
-        servisId: servis3.id,
-        personelId: personel2.id,
+  for (const row of serviceSeedRows) {
+    const tarih = new Date(now);
+    tarih.setDate(now.getDate() + row.offsetDays);
+    tarih.setHours(12, 0, 0, 0);
+
+    const servis = await prisma.service.upsert({
+      where: { id: row.id },
+      update: {
+        tekneId: row.tekneId,
+        tekneAdi: row.tekneAdi,
+        isTuru: row.isTuru,
+        durum: row.durum,
+        tarih,
+        saat: row.saat,
+        servisAciklamasi: row.servisAciklamasi,
+        adres: row.adres,
+        yer: row.yer,
+        telefon: row.telefon,
+        ofisYetkiliId: admin.id,
+        deletedAt: null,
       },
-    },
-    update: {},
-    create: {
-      servisId: servis3.id,
-      personelId: personel2.id,
-      rol: 'SORUMLU',
-    },
-  });
-  console.log('✅ Sample servisler created');
+      create: {
+        id: row.id,
+        tekneId: row.tekneId,
+        tekneAdi: row.tekneAdi,
+        isTuru: row.isTuru,
+        durum: row.durum,
+        tarih,
+        saat: row.saat,
+        servisAciklamasi: row.servisAciklamasi,
+        adres: row.adres,
+        yer: row.yer,
+        telefon: row.telefon,
+        ofisYetkiliId: admin.id,
+      },
+    });
+
+    await prisma.servicePersonel.upsert({
+      where: {
+        servisId_personelId: {
+          servisId: servis.id,
+          personelId: row.sorumluPersonelId,
+        },
+      },
+      update: { rol: 'SORUMLU' },
+      create: {
+        servisId: servis.id,
+        personelId: row.sorumluPersonelId,
+        rol: 'SORUMLU',
+      },
+    });
+  }
+  console.log(`✅ Sample servisler created: ${serviceSeedRows.length} kayıt`);
+
+  // Appointment seed (Sprint 1 foundation): minimum 15 randevu
+  const toUtcFromTr = (dayOffset: number, hourTr: number, minuteTr: number) => {
+    const date = new Date(now);
+    date.setUTCDate(now.getUTCDate() + dayOffset);
+    date.setUTCHours(hourTr - 3, minuteTr, 0, 0);
+    return date;
+  };
+
+  const appointmentSeedRows: Array<{
+    id: string;
+    servisId: string;
+    personelId: string;
+    dayOffset: number;
+    startHourTr: number;
+    startMinuteTr: number;
+    durationHour: number;
+    status: 'PLANLANDI' | 'ONAY_BEKLIYOR' | 'ONAYLANDI' | 'BASLADI' | 'TAMAMLANDI';
+    notlar: string;
+    sira: number;
+  }> = [
+    { id: 'appointment-1', servisId: 'servis-1', personelId: personel1.id, dayOffset: 0, startHourTr: 9, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'İlk kontrol ziyareti', sira: 0 },
+    { id: 'appointment-2', servisId: 'servis-2', personelId: personel2.id, dayOffset: -1, startHourTr: 10, startMinuteTr: 30, durationHour: 2, status: 'ONAYLANDI', notlar: 'Arıza ön teşhis', sira: 0 },
+    { id: 'appointment-3', servisId: 'servis-3', personelId: personel2.id, dayOffset: -2, startHourTr: 8, startMinuteTr: 30, durationHour: 3, status: 'TAMAMLANDI', notlar: 'Tamamlanan proje ziyareti', sira: 0 },
+    { id: 'appointment-4', servisId: 'servis-4', personelId: personel1.id, dayOffset: 1, startHourTr: 11, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'Periyodik bakım', sira: 0 },
+    { id: 'appointment-5', servisId: 'servis-5', personelId: personel2.id, dayOffset: 2, startHourTr: 13, startMinuteTr: 30, durationHour: 2, status: 'ONAY_BEKLIYOR', notlar: 'Parça bekleme sonrası kontrol', sira: 0 },
+    { id: 'appointment-6', servisId: 'servis-6', personelId: personel1.id, dayOffset: 3, startHourTr: 15, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'Keşif ve teklif ziyareti', sira: 0 },
+    { id: 'appointment-7', servisId: 'servis-7', personelId: personel2.id, dayOffset: 4, startHourTr: 9, startMinuteTr: 15, durationHour: 2, status: 'PLANLANDI', notlar: 'Bakım seti uygulama', sira: 0 },
+    { id: 'appointment-8', servisId: 'servis-8', personelId: personel1.id, dayOffset: -3, startHourTr: 14, startMinuteTr: 45, durationHour: 2, status: 'BASLADI', notlar: 'Sahada aktif iş', sira: 0 },
+    { id: 'appointment-9', servisId: 'servis-9', personelId: personel2.id, dayOffset: 5, startHourTr: 12, startMinuteTr: 15, durationHour: 2, status: 'PLANLANDI', notlar: 'Montaj öncesi hazırlık', sira: 0 },
+    { id: 'appointment-10', servisId: 'servis-10', personelId: personel1.id, dayOffset: 6, startHourTr: 16, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'Yaz sonu bakım ziyareti', sira: 0 },
+    { id: 'appointment-11', servisId: 'servis-1', personelId: personel1.id, dayOffset: 1, startHourTr: 9, startMinuteTr: 0, durationHour: 1, status: 'ONAY_BEKLIYOR', notlar: 'Takip randevusu', sira: 1 },
+    { id: 'appointment-12', servisId: 'servis-2', personelId: personel2.id, dayOffset: 0, startHourTr: 11, startMinuteTr: 0, durationHour: 1, status: 'PLANLANDI', notlar: 'Parça test randevusu', sira: 1 },
+    { id: 'appointment-13', servisId: 'servis-5', personelId: personel2.id, dayOffset: 3, startHourTr: 10, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'Parça teslim sonrası işçilik', sira: 1 },
+    { id: 'appointment-14', servisId: 'servis-6', personelId: personel1.id, dayOffset: 4, startHourTr: 13, startMinuteTr: 0, durationHour: 2, status: 'PLANLANDI', notlar: 'Teklif revizyon ziyareti', sira: 1 },
+    { id: 'appointment-15', servisId: 'servis-9', personelId: personel2.id, dayOffset: 7, startHourTr: 9, startMinuteTr: 30, durationHour: 2, status: 'PLANLANDI', notlar: 'Montaj kapanış ziyareti', sira: 1 },
+  ];
+
+  for (const row of appointmentSeedRows) {
+    const baslangicAt = toUtcFromTr(row.dayOffset, row.startHourTr, row.startMinuteTr);
+    const bitisAt = new Date(baslangicAt.getTime() + row.durationHour * 60 * 60 * 1000);
+    await prisma.appointment.upsert({
+      where: { id: row.id },
+      update: {
+        servisId: row.servisId,
+        personelId: row.personelId,
+        baslangicAt,
+        bitisAt,
+        status: row.status,
+        notlar: row.notlar,
+        sira: row.sira,
+        kilitli: false,
+        deletedAt: null,
+      },
+      create: {
+        id: row.id,
+        servisId: row.servisId,
+        personelId: row.personelId,
+        baslangicAt,
+        bitisAt,
+        status: row.status,
+        notlar: row.notlar,
+        sira: row.sira,
+      },
+    });
+  }
+  console.log(`✅ Sample appointments created: ${appointmentSeedRows.length} kayıt`);
 
   console.log('🎉 Seed completed successfully!');
 }
