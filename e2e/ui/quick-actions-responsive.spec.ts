@@ -11,14 +11,19 @@ async function kolonSayisiniAl(selector: string, page: Page): Promise<number> {
 test('quick actions mobilde 2, desktopta 4 kolonda gorunmeli', async ({ page }) => {
   await loginAsAdmin(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
 
+  // QuickActions detay panelinin icinde oldugu icin once detay panelini acalim
   const detayKutusu = page.getByTestId('dashboard-detail-collapse');
+  await detayKutusu.waitFor({ state: 'attached', timeout: 10000 });
+
+  // Detay panelini ac (QuickActions icinde)
   await detayKutusu.locator('summary').click();
 
+  // QuickActions panelini bul
   const gridSecici = '[data-testid="quick-actions-panel"] .grid';
   const quickActionsGrid = page.locator(gridSecici);
-  await expect(quickActionsGrid).toBeVisible();
+  await expect(quickActionsGrid).toBeVisible({ timeout: 5000 });
 
   const mobilKolonSayisi = await kolonSayisiniAl(gridSecici, page);
   expect(mobilKolonSayisi).toBe(2);

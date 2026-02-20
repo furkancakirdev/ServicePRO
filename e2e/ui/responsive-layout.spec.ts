@@ -6,7 +6,12 @@ test('sayfalar mobilde tasma olmamali', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
 
   for (const rota of ['/servisler', '/ayarlar']) {
-    await page.goto(rota);
+    await page.goto(rota, { waitUntil: 'domcontentloaded' });
+
+    // Sayfanın yüklenmesini bekle - daha kısa timeout
+    await page.waitForSelector('main, [role="main"]', { timeout: 10000 }).catch(() => {
+      // Eğer main bulunamazsa devam et
+    });
 
     const boyutlar = await page.evaluate(() => ({
       govde: document.body.scrollWidth,

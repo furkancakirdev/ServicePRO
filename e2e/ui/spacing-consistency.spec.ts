@@ -4,22 +4,22 @@ import { loginAsAdmin } from '../../playwright/tests/helpers/login';
 test('card padding tutarli olmali', async ({ page }) => {
   await loginAsAdmin(page);
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
-  // Wait for content to load
-  await page.waitForSelector('main', { timeout: 15000 });
+  // Wait for dashboard to load
+  await page.waitForSelector('[data-testid="dashboard-grid-container"]', { timeout: 15000 });
 
-  // Check p-6 class elements (Tailwind padding-6 = 24px)
-  const p6Elements = await page.locator('.p-6').first();
+  // Check CardContent padding - Grand Maritime uses p-6 in CardContent
+  const cardElement = page.locator('.surface-panel, [class*="p-6"]').first();
 
-  await expect(p6Elements).toBeVisible();
+  await expect(cardElement).toBeVisible();
 
   // Verify padding value
-  const paddingValue = await p6Elements.evaluate(el => {
+  const paddingValue = await cardElement.evaluate(el => {
     const stil = window.getComputedStyle(el);
     return stil.paddingTop;
   });
 
-  // p-6 should be 24px
+  // p-6 should be 24px (1.5rem)
   expect(paddingValue).toBe('24px');
 });

@@ -117,13 +117,14 @@ test('dashboard metinleri okunabilir ve sade olmali', async ({ page }) => {
   await expect(
     dashboardAlani.getByRole('heading', { name: 'Dashboard' })
   ).toBeVisible();
-  await expect(dashboardAlani.getByText('Widgetleri duzenle, kaydet.')).toBeVisible();
+  // Grand Maritime: Widget metni "duzenle" yerine "düzenle" (Turkce karakter)
+  await expect(dashboardAlani.getByText(/Widgetleri.*[dD]üzenle/)).toBeVisible();
 
   const duzenleButonu = page.getByTestId('dashboard-edit-button');
-  await expect(duzenleButonu).toContainText('Duzenle');
+  await expect(duzenleButonu).toContainText(/Düzenle/);
 
   await duzenleButonu.click();
-  await expect(duzenleButonu).toContainText('Duzenlemeyi Bitir');
+  await expect(duzenleButonu).toContainText(/Düzenlemeyi Bitir/);
 });
 
 test('dashboard istatistik kartlari gereksiz aciklama icermemeli', async ({ page }) => {
