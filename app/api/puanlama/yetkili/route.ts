@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -32,6 +32,15 @@ function average(values: Array<number | null>): number {
   return Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
 }
 
+function canManageByOwner(params: {
+  isAdmin: boolean;
+  currentUserId: string;
+  ownerYetkiliId?: string | null;
+}): boolean {
+  if (params.isAdmin) return true;
+  return Boolean(params.ownerYetkiliId && params.ownerYetkiliId === params.currentUserId);
+}
+
 export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request, ['ADMIN', 'YETKILI']);
@@ -41,7 +50,7 @@ export async function GET(request: Request) {
     const ay = searchParams.get('ay');
 
     if (!ay || !/^\d{4}-\d{2}$/.test(ay)) {
-      return NextResponse.json({ error: 'Geçersiz ay formatı. Beklenen: YYYY-MM' }, { status: 400 });
+      return NextResponse.json({ error: 'Gecersiz ay formati. Beklenen: YYYY-MM' }, { status: 400 });
     }
 
     const [ustalar, ciraklar] = await Promise.all([
@@ -58,6 +67,7 @@ export async function GET(request: Request) {
           genelLiderlik: true,
           toplamPuan: true,
           kilitlendi: true,
+          yetkiliId: true,
           updatedAt: true,
         },
       }),
@@ -72,6 +82,7 @@ export async function GET(request: Request) {
           ogrenmeGelisim: true,
           toplamPuan: true,
           kilitlendi: true,
+          yetkiliId: true,
           updatedAt: true,
         },
       }),
@@ -80,41 +91,43 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ay,
       items: [
-        ...ustalar.map((r) => ({
+        ...ustalar.map((record) => ({
           tip: 'USTA' as const,
-          personelId: r.personnelId,
-          personelAd: r.personnelAd,
+          personelId: record.personnelId,
+          personelAd: record.personnelAd,
+          yetkiliId: record.yetkiliId,
           cevaplar: {
-            uniformaVeIsg: r.uniformaVeIsg,
-            musteriIletisimi: r.musteriIletisimi,
-            planlamaKoordinasyon: r.planlamaKoordinasyon,
-            teknikTespit: r.teknikTespit,
-            raporDokumantasyon: r.raporDokumantasyon,
-            genelLiderlik: r.genelLiderlik,
+            uniformaVeIsg: record.uniformaVeIsg,
+            musteriIletisimi: record.musteriIletisimi,
+            planlamaKoordinasyon: record.planlamaKoordinasyon,
+            teknikTespit: record.teknikTespit,
+            raporDokumantasyon: record.raporDokumantasyon,
+            genelLiderlik: record.genelLiderlik,
           },
-          toplamPuan: Math.round(r.toplamPuan),
-          kilitlendi: Boolean(r.kilitlendi),
-          updatedAt: r.updatedAt,
+          toplamPuan: Math.round(record.toplamPuan),
+          kilitlendi: Boolean(record.kilitlendi),
+          updatedAt: record.updatedAt,
         })),
-        ...ciraklar.map((r) => ({
+        ...ciraklar.map((record) => ({
           tip: 'CIRAK' as const,
-          personelId: r.personnelId,
-          personelAd: r.personnelAd,
+          personelId: record.personnelId,
+          personelAd: record.personnelAd,
+          yetkiliId: record.yetkiliId,
           cevaplar: {
-            uniformaVeIsg: r.uniformaVeIsg,
-            ekipIciDavranis: r.ekipIciDavranis,
-            destekKalitesi: r.destekKalitesi,
-            ogrenmeGelisim: r.ogrenmeGelisim,
+            uniformaVeIsg: record.uniformaVeIsg,
+            ekipIciDavranis: record.ekipIciDavranis,
+            destekKalitesi: record.destekKalitesi,
+            ogrenmeGelisim: record.ogrenmeGelisim,
           },
-          toplamPuan: Math.round(r.toplamPuan),
-          kilitlendi: Boolean(r.kilitlendi),
-          updatedAt: r.updatedAt,
+          toplamPuan: Math.round(record.toplamPuan),
+          kilitlendi: Boolean(record.kilitlendi),
+          updatedAt: record.updatedAt,
         })),
       ],
     });
   } catch (error) {
     console.error('GET /api/puanlama/yetkili error:', error);
-    return NextResponse.json({ error: 'Yetkili değerlendirmeleri alınamadı' }, { status: 500 });
+    return NextResponse.json({ error: 'Yetkili degerlendirmeleri alinamadi' }, { status: 500 });
   }
 }
 
@@ -126,12 +139,12 @@ export async function POST(request: Request) {
     const parsed = payloadSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Geçersiz istek verisi', details: parsed.error.flatten() },
+        { error: 'Gecersiz istek verisi', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const { personelId, ay, cevaplar, notlar, forceOverwrite } = parsed.data;
+    const { personelId, ay, cevaplar, notlar } = parsed.data;
     const isAdmin = auth.payload.role === 'ADMIN';
 
     const personel = await prisma.personel.findUnique({
@@ -140,25 +153,25 @@ export async function POST(request: Request) {
     });
 
     if (!personel) {
-      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 });
+      return NextResponse.json({ error: 'Personel bulunamadi' }, { status: 404 });
     }
 
     if (personel.unvan === 'USTA') {
       const existing = await prisma.yetkiliDegerlendirmeUsta.findUnique({
         where: { personnelId_ay: { personnelId: personelId, ay } },
-        select: { kilitlendi: true },
+        select: { kilitlendi: true, yetkiliId: true },
       });
 
-      if (existing?.kilitlendi && !forceOverwrite) {
+      if (
+        existing &&
+        !canManageByOwner({
+          isAdmin,
+          currentUserId: auth.payload.userId,
+          ownerYetkiliId: existing.yetkiliId,
+        })
+      ) {
         return NextResponse.json(
-          { error: 'Bu değerlendirme kilitli. Güncelleme için admin overwrite gerekir.' },
-          { status: 423 }
-        );
-      }
-
-      if (existing?.kilitlendi && forceOverwrite && !isAdmin) {
-        return NextResponse.json(
-          { error: 'Kilitli kaydı sadece admin overwrite edebilir.' },
+          { error: 'Bu kaydi sadece olusturan yetkili veya admin duzenleyebilir.' },
           { status: 403 }
         );
       }
@@ -173,6 +186,7 @@ export async function POST(request: Request) {
       };
 
       const toplamPuan = average(Object.values(scores));
+      const ownerYetkiliId = existing?.yetkiliId ?? auth.payload.userId;
 
       const saved = await prisma.yetkiliDegerlendirmeUsta.upsert({
         where: { personnelId_ay: { personnelId: personelId, ay } },
@@ -180,7 +194,7 @@ export async function POST(request: Request) {
           ...scores,
           toplamPuan,
           notlar: notlar ?? null,
-          yetkiliId: auth.payload.userId,
+          yetkiliId: ownerYetkiliId,
           kilitlendi: existing?.kilitlendi ?? false,
         },
         create: {
@@ -199,8 +213,28 @@ export async function POST(request: Request) {
         success: true,
         tip: 'USTA',
         personelId,
+        yetkiliId: saved.yetkiliId,
         toplamPuan: Math.round(saved.toplamPuan),
       });
+    }
+
+    const existing = await prisma.yetkiliDegerlendirmeCirak.findUnique({
+      where: { personnelId_ay: { personnelId: personelId, ay } },
+      select: { kilitlendi: true, yetkiliId: true },
+    });
+
+    if (
+      existing &&
+      !canManageByOwner({
+        isAdmin,
+        currentUserId: auth.payload.userId,
+        ownerYetkiliId: existing.yetkiliId,
+      })
+    ) {
+      return NextResponse.json(
+        { error: 'Bu kaydi sadece olusturan yetkili veya admin duzenleyebilir.' },
+        { status: 403 }
+      );
     }
 
     const scores = {
@@ -209,26 +243,8 @@ export async function POST(request: Request) {
       destekKalitesi: toScore(cevaplar.destekKalitesi),
       ogrenmeGelisim: toScore(cevaplar.ogrenmeGelisim),
     };
-
     const toplamPuan = average(Object.values(scores));
-    const existing = await prisma.yetkiliDegerlendirmeCirak.findUnique({
-      where: { personnelId_ay: { personnelId: personelId, ay } },
-      select: { kilitlendi: true },
-    });
-
-    if (existing?.kilitlendi && !forceOverwrite) {
-      return NextResponse.json(
-        { error: 'Bu değerlendirme kilitli. Güncelleme için admin overwrite gerekir.' },
-        { status: 423 }
-      );
-    }
-
-    if (existing?.kilitlendi && forceOverwrite && !isAdmin) {
-      return NextResponse.json(
-        { error: 'Kilitli kaydı sadece admin overwrite edebilir.' },
-        { status: 403 }
-      );
-    }
+    const ownerYetkiliId = existing?.yetkiliId ?? auth.payload.userId;
 
     const saved = await prisma.yetkiliDegerlendirmeCirak.upsert({
       where: { personnelId_ay: { personnelId: personelId, ay } },
@@ -236,7 +252,7 @@ export async function POST(request: Request) {
         ...scores,
         toplamPuan,
         notlar: notlar ?? null,
-        yetkiliId: auth.payload.userId,
+        yetkiliId: ownerYetkiliId,
         kilitlendi: existing?.kilitlendi ?? false,
       },
       create: {
@@ -255,17 +271,18 @@ export async function POST(request: Request) {
       success: true,
       tip: 'CIRAK',
       personelId,
+      yetkiliId: saved.yetkiliId,
       toplamPuan: Math.round(saved.toplamPuan),
     });
   } catch (error) {
     console.error('POST /api/puanlama/yetkili error:', error);
-    return NextResponse.json({ error: 'Yetkili değerlendirmesi kaydedilemedi' }, { status: 500 });
+    return NextResponse.json({ error: 'Yetkili degerlendirmesi kaydedilemedi' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await requireAuth(request, ['ADMIN']);
+    const auth = await requireAuth(request, ['ADMIN', 'YETKILI']);
     if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(request.url);
@@ -279,68 +296,77 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Önce personeli bul
+    const isAdmin = auth.payload.role === 'ADMIN';
+
     const personel = await prisma.personel.findUnique({
       where: { id: personelId, deletedAt: null },
       select: { id: true, unvan: true },
     });
-
     if (!personel) {
-      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 });
+      return NextResponse.json({ error: 'Personel bulunamadi' }, { status: 404 });
     }
-
-    let deleted = false;
 
     if (personel.unvan === 'USTA') {
       const existing = await prisma.yetkiliDegerlendirmeUsta.findUnique({
         where: { personnelId_ay: { personnelId: personelId, ay } },
-        select: { kilitlendi: true },
+        select: { personnelId: true, ay: true, yetkiliId: true },
       });
 
-      if (existing?.kilitlendi) {
+      if (!existing) {
+        return NextResponse.json({ error: 'Silinecek kayit bulunamadi' }, { status: 404 });
+      }
+
+      if (
+        !canManageByOwner({
+          isAdmin,
+          currentUserId: auth.payload.userId,
+          ownerYetkiliId: existing.yetkiliId,
+        })
+      ) {
         return NextResponse.json(
-          { error: 'Kilitli değerlendirme silinemez. Önce kilidi açın.' },
-          { status: 423 }
+          { error: 'Bu kaydi sadece olusturan yetkili veya admin silebilir.' },
+          { status: 403 }
         );
       }
 
-      const result = await prisma.yetkiliDegerlendirmeUsta.deleteMany({
-        where: { personnelId: personelId, ay },
+      await prisma.yetkiliDegerlendirmeUsta.delete({
+        where: { personnelId_ay: { personnelId: personelId, ay } },
       });
-      deleted = result.count > 0;
     } else {
       const existing = await prisma.yetkiliDegerlendirmeCirak.findUnique({
         where: { personnelId_ay: { personnelId: personelId, ay } },
-        select: { kilitlendi: true },
+        select: { personnelId: true, ay: true, yetkiliId: true },
       });
 
-      if (existing?.kilitlendi) {
+      if (!existing) {
+        return NextResponse.json({ error: 'Silinecek kayit bulunamadi' }, { status: 404 });
+      }
+
+      if (
+        !canManageByOwner({
+          isAdmin,
+          currentUserId: auth.payload.userId,
+          ownerYetkiliId: existing.yetkiliId,
+        })
+      ) {
         return NextResponse.json(
-          { error: 'Kilitli değerlendirme silinemez. Önce kilidi açın.' },
-          { status: 423 }
+          { error: 'Bu kaydi sadece olusturan yetkili veya admin silebilir.' },
+          { status: 403 }
         );
       }
 
-      const result = await prisma.yetkiliDegerlendirmeCirak.deleteMany({
-        where: { personnelId: personelId, ay },
+      await prisma.yetkiliDegerlendirmeCirak.delete({
+        where: { personnelId_ay: { personnelId: personelId, ay } },
       });
-      deleted = result.count > 0;
-    }
-
-    if (!deleted) {
-      return NextResponse.json(
-        { error: 'Silinecek kayıt bulunamadı' },
-        { status: 404 }
-      );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Değerlendirme başarıyla silindi',
+      message: 'Degerlendirme basariyla silindi',
     });
   } catch (error) {
     console.error('DELETE /api/puanlama/yetkili error:', error);
-    return NextResponse.json({ error: 'Değerlendirme silinemedi' }, { status: 500 });
+    return NextResponse.json({ error: 'Degerlendirme silinemedi' }, { status: 500 });
   }
 }
 
@@ -352,7 +378,7 @@ export async function PATCH(request: Request) {
     const parsed = lockPayloadSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Geçersiz kilitleme isteği', details: parsed.error.flatten() },
+        { error: 'Gecersiz kilitleme istegi', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -391,8 +417,6 @@ export async function PATCH(request: Request) {
     });
   } catch (error) {
     console.error('PATCH /api/puanlama/yetkili error:', error);
-    return NextResponse.json({ error: 'Kilitleme işlemi başarısız' }, { status: 500 });
+    return NextResponse.json({ error: 'Kilitleme islemi basarisiz' }, { status: 500 });
   }
 }
-
-

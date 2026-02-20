@@ -197,4 +197,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Aylık puanlama verisi alınamadı' }, { status: 500 });
   }
 }
-

@@ -1,265 +1,244 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { KonumDialog, type KonumFormVerisi } from '@/components/admin/konumlar/KonumDialog';
+import { KonumlarTable, type KonumKaydiDto } from '@/components/admin/konumlar/KonumlarTable';
 import { useAuth } from '@/lib/auth/auth-context';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface LokasyonBilgisi {
-  lokasyon: string;
-  sayi: number;
-}
+type DialogDurumu = {
+  acik: boolean;
+  mod: 'create' | 'edit';
+  hedef: KonumKaydiDto | null;
+};
 
-const varsayilanLokasyonlar = [
-  'YATMARIN',
-  'NETSEL',
-  'DIŞ SERVİS',
-  'MARINA',
-  'LİMAN',
-  'TEKNİK OFİS',
-  'DEPO',
-];
+const ILK_DIALOG_DURUMU: DialogDurumu = {
+  acik: false,
+  mod: 'create',
+  hedef: null,
+};
 
 export default function KonumlarPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [lokasyonlar, setLokasyonlar] = useState<LokasyonBilgisi[]>([]);
-  const [yeniLokasyon, setYeniLokasyon] = useState('');
-  const [eklemeLoading, setEklemeLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const { user, isLoading } = useAuth();
+
+  const [konumlar, setKonumlar] = useState<KonumKaydiDto[]>([]);
+  const [veriYukleniyor, setVeriYukleniyor] = useState(true);
+  const [kaydetmeYukleniyor, setKaydetmeYukleniyor] = useState(false);
+  const [silinenKonumId, setSilinenKonumId] = useState<string | null>(null);
+  const [dialogDurumu, setDialogDurumu] = useState<DialogDurumu>(ILK_DIALOG_DURUMU);
+
+  async function konumlariYukle(): Promise<void> {
+    setVeriYukleniyor(true);
+    try {
+      const response = await fetch('/api/admin/konumlar', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Konumlar yüklenemedi');
+      }
+
+      const body = (await response.json()) as KonumKaydiDto[];
+      setKonumlar(body);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Konumlar yüklenemedi');
+    } finally {
+      setVeriYukleniyor(false);
+    }
+  }
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
     if (user.role !== 'ADMIN') {
-      router.push('/dashboard');
+      router.replace('/');
       return;
     }
-    loadLokasyonlar();
-  }, [user, router]);
+    void konumlariYukle();
+  }, [isLoading, router, user]);
 
-  const loadLokasyonlar = async () => {
-    setLoading(true);
+  const dialogVarsayilanDegerleri = useMemo<Partial<KonumFormVerisi> | undefined>(() => {
+    if (dialogDurumu.mod !== 'edit' || !dialogDurumu.hedef) return undefined;
+    return {
+      key: dialogDurumu.hedef.key,
+      label: dialogDurumu.hedef.label,
+      adres: dialogDurumu.hedef.adres ?? '',
+      telefon: dialogDurumu.hedef.telefon ?? '',
+      sirasi: dialogDurumu.hedef.sirasi,
+      aktif: dialogDurumu.hedef.aktif,
+    };
+  }, [dialogDurumu.hedef, dialogDurumu.mod]);
+
+  async function konumKaydet(formVerisi: KonumFormVerisi): Promise<void> {
+    setKaydetmeYukleniyor(true);
     try {
-      const res = await fetch('/api/konumlar');
-      if (res.ok) {
-        const data = await res.json();
-        setLokasyonlar(data);
+      const payload = {
+        key: formVerisi.key,
+        label: formVerisi.label,
+        adres: formVerisi.adres || null,
+        telefon: formVerisi.telefon || null,
+        sirasi: formVerisi.sirasi,
+        aktif: formVerisi.aktif,
+      };
+
+      if (dialogDurumu.mod === 'create') {
+        const response = await fetch('/api/admin/konumlar', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({ error: 'Konum eklenemedi' }));
+          throw new Error(typeof body.error === 'string' ? body.error : 'Konum eklenemedi');
+        }
+
+        toast.success('Konum eklendi');
+      } else if (dialogDurumu.hedef) {
+        const response = await fetch(`/api/admin/konumlar/${dialogDurumu.hedef.id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({ error: 'Konum güncellenemedi' }));
+          throw new Error(typeof body.error === 'string' ? body.error : 'Konum güncellenemedi');
+        }
+
+        toast.success('Konum güncellendi');
       }
+
+      setDialogDurumu(ILK_DIALOG_DURUMU);
+      await konumlariYukle();
     } catch (error) {
-      console.error('Konumlar yüklenirken hata:', error);
+      toast.error(error instanceof Error ? error.message : 'Konum kaydedilemedi');
     } finally {
-      setLoading(false);
+      setKaydetmeYukleniyor(false);
     }
-  };
+  }
 
-  const handleYeniLokasyon = async () => {
-    const trimmed = yeniLokasyon.trim();
-    if (!trimmed) return;
+  async function konumSil(konum: KonumKaydiDto): Promise<void> {
+    if (!window.confirm(`"${konum.label}" konumunu silmek istediğinize emin misiniz?`)) {
+      return;
+    }
 
-    setEklemeLoading(true);
+    setSilinenKonumId(konum.id);
     try {
-      const res = await fetch('/api/konumlar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lokasyon: trimmed }),
+      const response = await fetch(`/api/admin/konumlar/${konum.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
       });
 
-      if (res.status === 409) {
-        alert('Bu lokasyon zaten mevcut.');
-        return;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: 'Konum silinemedi' }));
+        throw new Error(typeof body.error === 'string' ? body.error : 'Konum silinemedi');
       }
 
-      if (res.ok) {
-        setYeniLokasyon('');
-        alert(`Lokasyon kaydedildi: ${trimmed}`);
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Bir hata oluştu.');
-      }
+      toast.success('Konum silindi');
+      await konumlariYukle();
     } catch (error) {
-      console.error('Lokasyon eklenirken hata:', error);
-      alert('Bir hata oluştu.');
+      toast.error(error instanceof Error ? error.message : 'Konum silinemedi');
     } finally {
-      setEklemeLoading(false);
+      setSilinenKonumId(null);
     }
-  };
+  }
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadLokasyonlar();
-    setRefreshing(false);
-  };
-
-  const toplamServis = lokasyonlar.reduce((sum, l) => sum + l.sayi, 0);
-
-  if (loading) {
+  if (isLoading || veriYukleniyor) {
     return (
-      <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        Yükleniyor...
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-6 text-sm text-slate-300">
+        Konumlar yükleniyor...
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
-      <header className="hero-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <div className="hero-content">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-            <Link
-              href="/ayarlar"
-              className="btn btn-secondary"
-              style={{ padding: 'var(--space-xs) var(--space-sm)' }}
-            >
-              ←
-            </Link>
-            <div>
-              <h1 className="hero-title">Konum Yönetimi</h1>
-              <p className="hero-subtitle">Marina ve servis konumları</p>
-            </div>
+    <div className="space-y-4">
+      <header className="hero-panel flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/ayarlar">
+            <Button variant="secondary" size="icon" aria-label="Ayarlar sayfasına dön">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="page-title">Konum Yönetimi</h1>
+            <p className="page-subtitle">Toplam {konumlar.length} konum kaydı</p>
           </div>
-          <button
-            className="btn btn-secondary"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            className="gap-2"
+            onClick={() => void konumlariYukle()}
+            disabled={veriYukleniyor}
           >
-            {refreshing ? 'Yenileniyor...' : '🔄 Yenile'}
-          </button>
+            <RefreshCw className="h-4 w-4" />
+            Yenile
+          </Button>
+          <Button
+            className="gap-2"
+            data-testid="konum-create-button"
+            onClick={() =>
+              setDialogDurumu({
+                acik: true,
+                mod: 'create',
+                hedef: null,
+              })
+            }
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Ekle
+          </Button>
         </div>
       </header>
 
-      <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-          Konumlar, servis kayıtlarındaki <strong>yer</strong> alanından türetilir.
-          Yeni bir servis kaydı oluştururken bu konumlardan birini seçebilirsiniz.
-        </p>
-      </div>
+      <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+        <CardHeader>
+          <CardTitle className="text-slate-100">Servis Konumları</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <KonumlarTable
+            konumlar={konumlar}
+            silinenKonumId={silinenKonumId}
+            onDuzenle={(konum) =>
+              setDialogDurumu({
+                acik: true,
+                mod: 'edit',
+                hedef: konum,
+              })
+            }
+            onSil={konumSil}
+          />
+        </CardContent>
+      </Card>
 
-      {/* İstatistik Kartı */}
-      <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
-          <div>
-            <h3 style={{ margin: '0 0 var(--space-xs) 0' }}>Toplam {lokasyonlar.length} Konum</h3>
-            <p style={{ color: 'var(--color-text-muted)', margin: 0, fontSize: '0.9rem' }}>
-              {toplamServis} servis kaydı ile ilişkili
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-            <input
-              type="text"
-              value={yeniLokasyon}
-              onChange={(e) => setYeniLokasyon(e.target.value.toUpperCase())}
-              placeholder="Yeni konum adı..."
-              style={{
-                padding: 'var(--space-xs) var(--space-sm)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.9rem',
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleYeniLokasyon()}
-            />
-            <button
-              className="btn btn-primary"
-              onClick={handleYeniLokasyon}
-              disabled={eklemeLoading || !yeniLokasyon.trim()}
-            >
-              {eklemeLoading ? 'Ekleniyor...' : 'Ekle'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Konumlar Grid */}
-      {lokasyonlar.length === 0 ? (
-        <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-xl)' }}>
-          <p style={{ color: 'var(--color-text-muted)', margin: 0, fontSize: '1.1rem' }}>
-            Henüz hiç konum kaydı yok.
-          </p>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-sm)' }}>
-            Servis kaydı oluşturduğunuzda konumlar burada görüntülenecek.
-          </p>
-        </div>
-      ) : (
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: 'var(--space-md)',
-          }}
-        >
-          {lokasyonlar
-            .sort((a, b) => b.sayi - a.sayi || a.lokasyon.localeCompare(b.lokasyon, 'tr'))
-            .map((item) => (
-              <div
-                key={item.lokasyon}
-                className="surface-panel"
-                style={{
-                  borderLeft: '4px solid var(--color-primary)',
-                  transition: 'transform 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-xs)' }}>
-                  <span style={{ fontSize: '1.2rem' }}>📍</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>{item.lokasyon}</h4>
-                </div>
-                <div
-                  style={{
-                    padding: 'var(--space-xs) var(--space-sm)',
-                    background: 'var(--color-bg-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.85rem',
-                    display: 'inline-block',
-                  }}
-                >
-                  {item.sayi} servis
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* Varsayılan Konumlar Referansı */}
-      <div
-        className="surface-panel"
-        style={{
-          marginTop: 'var(--space-lg)',
-          border: '1px dashed var(--color-border)',
+      <KonumDialog
+        acik={dialogDurumu.acik}
+        mod={dialogDurumu.mod}
+        kaydediliyor={kaydetmeYukleniyor}
+        varsayilanDegerler={dialogVarsayilanDegerleri}
+        onAcikDegisti={(acik) => {
+          if (!acik) {
+            setDialogDurumu(ILK_DIALOG_DURUMU);
+            return;
+          }
+          setDialogDurumu((prev) => ({ ...prev, acik }));
         }}
-      >
-        <h4 style={{ margin: '0 0 var(--space-sm) 0' }}>Varsayılan Konumlar</h4>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-sm)', fontSize: '0.9rem' }}>
-          Sistemde sık kullanılan konumlar:
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-xs)' }}>
-          {varsayilanLokasyonlar.map((v) => {
-            const mevcut = lokasyonlar.find((l) => l.lokasyon === v);
-            return (
-              <span
-                key={v}
-                style={{
-                  padding: 'var(--space-xs) var(--space-sm)',
-                  background: mevcut ? 'var(--color-primary)' : 'var(--color-bg-subtle)',
-                  color: mevcut ? 'white' : 'var(--color-text-muted)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.85rem',
-                }}
-              >
-                {v} {mevcut && `(${mevcut.sayi})`}
-              </span>
-            );
-          })}
-        </div>
-      </div>
+        onKaydet={konumKaydet}
+      />
     </div>
   );
 }

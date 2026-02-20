@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, type User } from '@/lib/auth/auth-context';
+import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from '@/lib/components/ui/use-toast';
 
 // User interface artık auth-context'ten import ediliyor

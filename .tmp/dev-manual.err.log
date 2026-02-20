@@ -1,0 +1,60 @@
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js', but to 'c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\handle-externals.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\handle-externals.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js', but to 'c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js', but to 'c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs c:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+[Table] Column with id 'lokasyonGroup' does not exist.
+(node:15404) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+[Table] Column with id 'lokasyonGroup' does not exist.
+^C^C

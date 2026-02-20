@@ -1,124 +1,56 @@
 {
-    "theme": {
-        "primaryColor": "#3b82f6",
-        "darkMode": true,
-        "fontSize": "medium"
-    },
-    "durumlar": [
-        {
-            "id": "RANDEVU_VERILDI",
-            "label": "Randevu Verildi",
-            "color": "#6366f1",
-            "icon": "📅",
-            "sira": 1
-        },
-        {
-            "id": "DEVAM_EDIYOR",
-            "label": "Devam Ediyor",
-            "color": "#22c55e",
-            "icon": "🔄",
-            "sira": 2
-        },
-        {
-            "id": "PARCA_BEKLIYOR",
-            "label": "Parça Bekliyor",
-            "color": "#f59e0b",
-            "icon": "📦",
-            "sira": 3
-        },
-        {
-            "id": "MUSTERI_ONAY_BEKLIYOR",
-            "label": "Müşteri Onay Bekliyor",
-            "color": "#8b5cf6",
-            "icon": "⏳",
-            "sira": 4
-        },
-        {
-            "id": "RAPOR_BEKLIYOR",
-            "label": "Rapor Bekliyor",
-            "color": "#ec4899",
-            "icon": "📝",
-            "sira": 5
-        },
-        {
-            "id": "KESIF_KONTROL",
-            "label": "Keşif/Kontrol",
-            "color": "#14b8a6",
-            "icon": "🔍",
-            "sira": 6
-        },
-        {
-            "id": "TAMAMLANDI",
-            "label": "Tamamlandı",
-            "color": "#10b981",
-            "icon": "✅",
-            "sira": 7
-        },
-        {
-            "id": "IPTAL",
-            "label": "İptal",
-            "color": "#ef4444",
-            "icon": "❌",
-            "sira": 8
-        }
-    ],
-    "konumlar": [
-        {
-            "id": "YATMARIN",
-            "label": "Yatmarın",
-            "color": "#3b82f6"
-        },
-        {
-            "id": "NETSEL",
-            "label": "Netsel",
-            "color": "#8b5cf6"
-        },
-        {
-            "id": "DIS_SERVIS",
-            "label": "Dış Servis",
-            "color": "#f59e0b"
-        }
-    ],
-    "isTurleri": [
-        {
-            "id": "paket",
-            "label": "Paket Servis",
-            "carpan": 1.0
-        },
-        {
-            "id": "ariza",
-            "label": "Arıza/Keşif",
-            "carpan": 1.2
-        },
-        {
-            "id": "proje",
-            "label": "Proje/Refit",
-            "carpan": 1.5
-        }
-    ],
-    "unvanlar": [
-        {
-            "id": "ustabasi",
-            "label": "Ustabaşı",
-            "icon": "👷",
-            "puanCarpani": 1.0
-        },
-        {
-            "id": "teknisyen",
-            "label": "Teknisyen",
-            "icon": "🔧",
-            "puanCarpani": 0.9
-        },
-        {
-            "id": "cirak",
-            "label": "Çırak",
-            "icon": "🎓",
-            "puanCarpani": 0.7
-        }
-    ],
-    "sirketBilgileri": {
-        "ad": "ServicePRO",
-        "slogan": "Tekne Teknik Servis Takip Sistemi",
-        "logo": "/logo.png"
-    }
+  "theme": {
+    "primaryColor": "#3b82f6",
+    "darkMode": true,
+    "fontSize": "medium"
+  },
+  "weather": {
+    "defaultLocationName": "Marmaris",
+    "defaultLatitude": 36.8529,
+    "defaultLongitude": 28.2742
+  },
+  "sync": {
+    "enabled": true,
+    "defaultSheet": "PLANLAMA",
+    "staleThresholdMinutes": 15,
+    "validationSampleLimit": 2000,
+    "allowFullReset": true,
+    "cronExpression": "*/10 * * * *",
+    "timezone": "Europe/Istanbul"
+  },
+  "access": {
+    "yetkiliCanAccessSettings": true,
+    "yetkiliCanRunSyncValidation": true,
+    "yetkiliCanViewSyncLogs": true
+  },
+  "company": {
+    "name": "ServicePRO",
+    "supportEmail": "destek@servicepro.local",
+    "supportPhone": "+90 252 000 00 00"
+  },
+  "ui": {
+    "densityDefault": "comfortable",
+    "hintsDefaultVisible": true,
+    "animationsEnabled": true,
+    "highContrastMode": false,
+    "largeTouchTargets": false,
+    "compactTablesByDefault": false,
+    "stickyQuickActions": true
+  },
+  "partsEta": {
+    "enabled": true,
+    "minHistoryRecords": 2,
+    "historyLookbackDays": 365,
+    "defaultWaitingEtaDays": 5,
+    "defaultOrderedEtaDays": 3,
+    "maxEtaDays": 30
+  },
+  "formGuards": {
+    "requireStartDate": false,
+    "requireAssignedPersonnel": false,
+    "requireEtaForWaitingParts": true,
+    "requireEtaForOrderedParts": true,
+    "requireSupplierForWaitingParts": false,
+    "warnOnMissingContactInfo": true
+  }
 }

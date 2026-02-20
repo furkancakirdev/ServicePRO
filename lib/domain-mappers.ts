@@ -12,6 +12,7 @@
     .replace(/[ö]/g, 'O')
     .replace(/[Ç]/g, 'C')
     .replace(/[ç]/g, 'C')
+    .replace(/\s+/g, ' ')
     .toUpperCase()
     .trim();
 }
@@ -39,9 +40,8 @@ const ROLE_APP_TO_DB: Record<string, string> = {
 };
 
 const ROLE_DB_TO_APP: Record<string, string> = {
-  TEKNIisyEN: 'YETKILI',
-  TEKNISYEN: 'YETKILI',
   TEKNIISYEN: 'YETKILI',
+  TEKNISYEN: 'YETKILI',
   YETKILI: 'YETKILI',
   ADMIN: 'ADMIN',
   MUSTERI: 'YETKILI',
@@ -69,12 +69,18 @@ export function normalizeLokasyonText(value: unknown): string {
 }
 
 export function getLokasyonGroupFromFields(yer?: unknown, adres?: unknown): LokasyonGroup {
-  const normalizedYer = normalizeKey(normalizeLokasyonText(yer));
   const normalizedAdres = normalizeKey(normalizeLokasyonText(adres));
-  const combined = `${normalizedYer} ${normalizedAdres}`;
+  const normalizedYer = normalizeKey(normalizeLokasyonText(yer));
 
-  if (combined.includes('YATMARIN') || combined.includes('YATMARIN')) return 'YATMARIN';
-  if (combined.includes('NETSEL')) return 'NETSEL';
+  // Ana adres birincil kaynak olmalı. Yer yalnızca adres boş ise fallback olarak değerlendirilir.
+  if (normalizedAdres.includes('YATMARIN') || normalizedAdres.includes('YAT MARIN')) return 'YATMARIN';
+  if (normalizedAdres.includes('NETSEL')) return 'NETSEL';
+
+  if (!normalizedAdres) {
+    if (normalizedYer.includes('YATMARIN') || normalizedYer.includes('YAT MARIN')) return 'YATMARIN';
+    if (normalizedYer.includes('NETSEL')) return 'NETSEL';
+  }
+
   return 'DIS_SERVIS';
 }
 
@@ -89,4 +95,3 @@ export function normalizeUserRoleForApp(value: string): string {
   const key = normalizeKey(value);
   return ROLE_DB_TO_APP[key] ?? value;
 }
-

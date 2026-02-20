@@ -18,7 +18,9 @@ type IsmailItem = {
 };
 
 type LocalUser = {
-  rol?: 'admin' | 'yetkili';
+  id?: string;
+  role?: 'ADMIN' | 'YETKILI' | 'admin' | 'yetkili';
+  rol?: 'ADMIN' | 'YETKILI' | 'admin' | 'yetkili';
 };
 
 function getCurrentMonth(): string {
@@ -42,7 +44,6 @@ export default function IsmailDegerlendirmePage() {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [forceOverwrite, setForceOverwrite] = useState(false);
   const [lockUpdating, setLockUpdating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -56,7 +57,8 @@ export default function IsmailDegerlendirmePage() {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
         const parsedUser: LocalUser | null = storedUser ? JSON.parse(storedUser) : null;
-        if (!ignore) setIsAdmin(parsedUser?.rol === 'admin');
+        const normalizedRole = String(parsedUser?.role ?? parsedUser?.rol ?? '').toUpperCase();
+        if (!ignore) setIsAdmin(normalizedRole === 'ADMIN');
 
         const [personelRes, ismailRes] = await Promise.all([
           fetch('/api/personel?aktif=true', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
@@ -119,11 +121,6 @@ export default function IsmailDegerlendirmePage() {
       setError('Kaydetmeden önce puan seçin.');
       return;
     }
-    const canOverwriteLocked = isAdmin && forceOverwrite;
-    if (locked.has(personel.id) && !canOverwriteLocked) {
-      setError('Bu kayıt kilitli. Güncellemek için admin overwrite açılmalı.');
-      return;
-    }
 
     setSavingId(personel.id);
     setError(null);
@@ -135,7 +132,7 @@ export default function IsmailDegerlendirmePage() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ personelId: personel.id, ay, puan, forceOverwrite: canOverwriteLocked }),
+        body: JSON.stringify({ personelId: personel.id, ay, puan }),
       });
 
       if (!res.ok) {
@@ -198,6 +195,50 @@ export default function IsmailDegerlendirmePage() {
     }
   }
 
+  async function handleDelete(personel: Personel) {
+    if (!saved.has(personel.id)) return;
+    if (!confirm(`${personel.ad} icin ${monthLabel(ay)} degerlendirmesini silmek istiyor musunuz?`)) {
+      return;
+    }
+
+    setSavingId(personel.id);
+    setError(null);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch(
+        `/api/puanlama/ismail?personelId=${encodeURIComponent(personel.id)}&ay=${encodeURIComponent(ay)}`,
+        {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error || 'Silme islemi basarisiz');
+      }
+
+      setSaved((prev) => {
+        const next = new Set(prev);
+        next.delete(personel.id);
+        return next;
+      });
+      setScores((prev) => ({
+        ...prev,
+        [personel.id]: null,
+      }));
+      setLocked((prev) => {
+        const next = new Set(prev);
+        next.delete(personel.id);
+        return next;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Silme islemi basarisiz');
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       <header className="hero-panel mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -245,17 +286,6 @@ export default function IsmailDegerlendirmePage() {
         <div className="card surface-panel" style={{ color: 'var(--color-error)', marginBottom: 'var(--space-md)' }}>
           {error}
         </div>
-      )}
-
-      {isAdmin && (
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-          <input
-            type="checkbox"
-            checked={forceOverwrite}
-            onChange={(e) => setForceOverwrite(e.target.checked)}
-          />
-          Kilitli kayıtları admin overwrite ile güncelle
-        </label>
       )}
 
       <div className="table-container surface-panel">
@@ -313,14 +343,27 @@ export default function IsmailDegerlendirmePage() {
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      className={saved.has(p.id) ? 'btn btn-success' : 'btn btn-primary'}
-                      disabled={savingId === p.id || !scores[p.id] || (locked.has(p.id) && !(isAdmin && forceOverwrite))}
-                      onClick={() => saveScore(p)}
-                    >
-                      {savingId === p.id ? 'Kaydediliyor...' : saved.has(p.id) ? 'Güncellendi' : 'Kaydet'}
-                    </button>
+                    <div style={{ display: 'inline-flex', gap: 'var(--space-xs)' }}>
+                      <button
+                        type="button"
+                        className={saved.has(p.id) ? 'btn btn-success' : 'btn btn-primary'}
+                        disabled={savingId === p.id || !scores[p.id]}
+                        onClick={() => saveScore(p)}
+                      >
+                        {savingId === p.id ? 'Kaydediliyor...' : saved.has(p.id) ? 'Guncellendi' : 'Kaydet'}
+                      </button>
+                      {saved.has(p.id) ? (
+                        <button
+                          type="button"
+                          className="btn btn-error"
+                          style={{ background: 'var(--color-error)', color: 'white' }}
+                          disabled={savingId === p.id}
+                          onClick={() => handleDelete(p)}
+                        >
+                          Sil
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -330,4 +373,3 @@ export default function IsmailDegerlendirmePage() {
     </div>
   );
 }
-

@@ -64,7 +64,7 @@ export default function GecmisPuanlamaPage() {
       setErrorAylik(null);
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const res = await fetch(`/api/puanlama/aylik?ay=${encodeURIComponent(ay)}`, {
+        const res = await fetch(`/api/puanlama/aylik'ay=${encodeURIComponent(ay)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) {
@@ -98,7 +98,7 @@ export default function GecmisPuanlamaPage() {
       setLoadingYillik(true);
       setErrorYillik(null);
       try {
-        const res = await fetch(`/api/raporlar/rozet-kazananlar?yil=${encodeURIComponent(yil)}`);
+        const res = await fetch(`/api/raporlar/rozet-kazananlar'yil=${encodeURIComponent(yil)}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body?.error?.message || 'Yıllık klasman verisi alınamadı');

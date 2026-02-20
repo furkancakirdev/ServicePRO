@@ -52,7 +52,7 @@ export function validatePasswordStrength(password: string): {
   }
 
   // Optional: Special character check
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+  if (!/[!@#$%^&*(),.'":{}|<>]/.test(password)) {
     errors.push('En az bir özel karakter içermelidir (!@#$%^&*...)');
   }
 

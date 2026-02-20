@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import {
   Input,
 } from '@/lib/components/ui';
 import { toast } from '@/lib/components/ui/use-toast';
+import { useUiRedesign } from '@/components/ui/ui-redesign-provider';
 
 interface HeaderProps {
   title?: string;
@@ -33,6 +34,7 @@ export default function Header({
   actions,
 }: HeaderProps) {
   const pathname = usePathname();
+  const { enabled, hintsVisible, setHintsVisible, densityMode, setDensityMode } = useUiRedesign();
   const [user, setUser] = useState<{ ad: string; rol: string } | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; message: string; read: boolean }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -48,11 +50,6 @@ export default function Header({
       }
     }
 
-    setNotifications([
-      { id: '1', message: 'Yeni servis randevusu oluşturuldu', read: false },
-      { id: '2', message: 'Marlin Yıldızı güncellendi', read: false },
-    ]);
-
     if (typeof window !== 'undefined') {
       setCanGoBack(showBackButton || (pathname !== '/' && window.history.length > 1));
     }
@@ -64,18 +61,20 @@ export default function Header({
     if (title) return { title, subtitle };
 
     const titles: Record<string, { title: string; subtitle: string }> = {
-      '/': { title: 'Servis Kontrol Merkezi', subtitle: 'Anlık operasyon özeti' },
-      '/servisler': { title: 'Servisler', subtitle: 'Tekne servis randevuları' },
+      '/': { title: 'Ana Ekran', subtitle: 'Gunluk operasyon ozeti' },
+      '/servisler': { title: 'Servis Listesi', subtitle: 'Tekne servis kayitlari' },
       '/servisler/yeni': { title: 'Yeni Servis', subtitle: 'Randevu oluştur' },
-      '/takvim': { title: 'Operasyon Gorunumu', subtitle: 'Doluluk, planlama ve atama takibi' },
-      '/personel': { title: 'Personel', subtitle: 'Ekip yönetimi' },
-      '/puanlama': { title: 'Marlin Yıldızı', subtitle: 'Performans değerlendirme' },
-      '/puanlama/gecmis': { title: 'Geçmiş', subtitle: 'Geçmiş değerlendirmeler' },
-      '/ayarlar': { title: 'Ayarlar', subtitle: 'Sistem ayarları' },
+      '/takvim': { title: 'Servis Listesi', subtitle: 'Tekne servis kayitlari' },
+      '/personel': { title: 'Personel', subtitle: 'Ekip yonetimi' },
+      '/puanlama': { title: 'Puanlama', subtitle: 'Performans degerlendirme' },
+      '/puanlama/gecmis': { title: 'Gecmis ve Klasman', subtitle: 'Aylik ve yillik sonuc ozeti' },
+      '/ayarlar': { title: 'Sistem Ayarlari', subtitle: 'Sync, erisim ve altyapi ayarlari' },
+      '/ayarlar/kullanicilar': { title: 'Kullanici Yonetimi', subtitle: 'Rol ve hesap yonetimi' },
+      '/ayarlar/konumlar': { title: 'Konum Yonetimi', subtitle: 'Servis lokasyon ayarlari' },
     };
 
     if (pathname.startsWith('/servisler/')) {
-      return { title: 'Servis Detayı', subtitle: 'Randevu bilgileri' };
+      return { title: 'Servis Düzenleme', subtitle: 'Servis, atama ve durum yönetimi' };
     }
 
     return titles[pathname] || { title: 'ServicePRO', subtitle: '' };
@@ -118,7 +117,7 @@ export default function Header({
 
         <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative" aria-label="Bildirimler">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -126,12 +125,16 @@ export default function Header({
               {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
+          <DropdownMenuContent
+            align="end"
+            className="w-80 border-border bg-popover text-popover-foreground"
+            data-testid="header-notifications-menu-content"
+          >
             <DropdownMenuLabel className="flex justify-between items-center">
               Bildirimler
               {unreadCount > 0 && (
                 <Button variant="ghost" size="sm" onClick={handleMarkAllRead}>
-                  Tümünü okundu
+                  Tümünü okundu yap
                 </Button>
               )}
             </DropdownMenuLabel>
@@ -149,11 +152,7 @@ export default function Header({
               <DropdownMenuItem disabled>Bildirim yok</DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link href="/notifications" className="w-full text-center text-primary">
-                Tüm bildirimleri gör
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuItem disabled>Bildirim merkezi yakında</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -166,7 +165,11 @@ export default function Header({
               <span className="hidden md:inline text-sm font-medium">{user?.ad || 'Kullanıcı'}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            className="border-border bg-popover text-popover-foreground"
+            data-testid="header-user-menu-content"
+          >
             <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
@@ -188,6 +191,27 @@ export default function Header({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {enabled ? (
+              <>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setHintsVisible(!hintsVisible);
+                  }}
+                >
+                  {hintsVisible ? 'Yardim ipuclarini gizle' : 'Yardim ipuclarini goster'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setDensityMode(densityMode === 'comfortable' ? 'compact' : 'comfortable');
+                  }}
+                >
+                  {densityMode === 'comfortable' ? 'Kompakt gorunume gec' : 'Rahat gorunume gec'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            ) : null}
             <DropdownMenuItem
               onClick={() => {
                 localStorage.removeItem('user');
@@ -196,7 +220,7 @@ export default function Header({
                   window.location.href = '/login';
                 }
               }}
-              className="text-red-600"
+              className="text-destructive focus:text-destructive"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

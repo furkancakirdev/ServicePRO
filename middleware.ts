@@ -3,12 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
 import { normalizeRole, type CanonicalRole } from '@/lib/auth/role';
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
-);
 
 // Public routes that don't require authentication
 const publicRoutes = [
@@ -20,6 +15,7 @@ const publicRoutes = [
   '/api/auth/logout',
   '/api/health',
   '/api/cron/sync',
+  '/api/cron/backup',
 ];
 
 // Static files that should be ignored
@@ -29,7 +25,7 @@ const staticFilePattern = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|
 // Format: { path: requiredMinimumRole }
 const protectedRoutes = {
   '/admin': 'ADMIN',
-  '/ayarlar': 'ADMIN',
+  '/ayarlar': 'YETKILI',
   '/users': 'ADMIN',
   '/raporlar': 'YETKILI',
   '/personel': 'YETKILI',
@@ -52,15 +48,36 @@ function hasMinimumRole(userRole: string, minimumRole: CanonicalRole): boolean {
 }
 
 /**
- * Verify JWT token and extract payload
+ * Validate token via API so middleware and API stay aligned across runtimes.
  */
-async function verifyToken(token: string): Promise<{ userId: string; email: string; role: string } | null> {
+async function verifyToken(
+  token: string,
+  request: NextRequest
+): Promise<{ userId: string; email: string; role: string } | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const verifyUrl = new URL('/api/auth/me', request.url);
+    const response = await fetch(verifyUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const user = data?.user;
+    if (!user?.id || !user?.email || !user?.role) {
+      return null;
+    }
+
     return {
-      userId: payload.userId as string,
-      email: payload.email as string,
-      role: payload.role as string,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
     };
   } catch {
     return null;
@@ -117,7 +134,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Verify token
-  const payload = await verifyToken(token);
+  const payload = await verifyToken(token, request);
 
   if (!payload) {
     // Invalid token

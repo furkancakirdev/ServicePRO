@@ -2,8 +2,29 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { mapRolToDb, mapUnvanToApi, mapUnvanToDb } from '@/lib/personel-mappers';
+import { z } from 'zod';
 
 type RouteContext = { params: { id: string } };
+
+const currentYear = new Date().getFullYear();
+
+const updatePersonelSchema = z
+  .object({
+    ad: z.string().trim().min(2, 'Ad en az 2 karakter olmalidir').max(120, 'Ad en fazla 120 karakter olabilir').optional(),
+    rol: z.enum(['teknisyen', 'yetkili']).optional(),
+    unvan: z.enum(['usta', 'cirak', 'yonetici', 'ofis']).optional(),
+    aktif: z.boolean().optional(),
+    girisYili: z
+      .preprocess((value) => {
+        if (value === '' || value === null || value === undefined) return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : value;
+      }, z.number().int().min(1950).max(currentYear + 1).nullable())
+      .optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Guncelleme icin en az bir alan gonderilmelidir',
+  });
 
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
@@ -75,12 +96,15 @@ export async function PUT(request: Request, { params }: RouteContext) {
     const auth = await requireAuth(request, ['ADMIN', 'YETKILI']);
     if (!auth.ok) return auth.response;
 
-    const body = await request.json();
-    const ad = body.ad !== undefined ? String(body.ad).trim() : undefined;
-
-    if (ad !== undefined && !ad) {
-      return NextResponse.json({ error: 'Ad alani bos olamaz' }, { status: 400 });
+    const payload = await request.json().catch(() => ({}));
+    const parsed = updatePersonelSchema.safeParse(payload);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Gecersiz personel guncelleme verisi', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
+    const body = parsed.data;
 
     const existing = await prisma.personel.findUnique({
       where: { id: params.id, deletedAt: null },
@@ -94,11 +118,11 @@ export async function PUT(request: Request, { params }: RouteContext) {
     const updated = await prisma.personel.update({
       where: { id: params.id },
       data: {
-        ...(ad !== undefined && { ad }),
+        ...(body.ad !== undefined && { ad: body.ad }),
         ...(body.rol !== undefined && { rol: mapRolToDb(body.rol) }),
         ...(body.unvan !== undefined && { unvan: mapUnvanToDb(body.unvan) }),
         ...(body.aktif !== undefined && { aktif: Boolean(body.aktif) }),
-        ...(body.girisYili !== undefined && { girisYili: body.girisYili ? Number(body.girisYili) : null }),
+        ...(body.girisYili !== undefined && { girisYili: body.girisYili }),
       },
       select: {
         id: true,
@@ -131,6 +155,9 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     console.error('Personel guncellenemedi:', error);
-    return NextResponse.json({ error: 'Personel guncellenemedi' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Personel guncellenemedi', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }

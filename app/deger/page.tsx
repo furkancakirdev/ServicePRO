@@ -14,12 +14,15 @@ type Personel = {
 type Question = { key: string; label: string; aciklama: string };
 type SavedItem = {
   personelId: string;
+  yetkiliId?: string;
   cevaplar?: Record<string, Answer | null>;
   kilitlendi?: boolean;
 };
 
 type LocalUser = {
-  rol?: 'admin' | 'yetkili';
+  id?: string;
+  role?: 'ADMIN' | 'YETKILI' | 'admin' | 'yetkili';
+  rol?: 'ADMIN' | 'YETKILI' | 'admin' | 'yetkili';
 };
 
 const USTA_QUESTIONS: Question[] = [
@@ -70,6 +73,8 @@ export default function YetkiliDegerlendirmePage() {
   const [forceOverwrite, setForceOverwrite] = useState(false);
   const [lockUpdating, setLockUpdating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [ownerByPersonelId, setOwnerByPersonelId] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let ignore = false;
@@ -81,8 +86,12 @@ export default function YetkiliDegerlendirmePage() {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
         const parsedUser: LocalUser | null = storedUser ? JSON.parse(storedUser) : null;
-        const admin = parsedUser?.rol === 'admin';
-        if (!ignore) setIsAdmin(admin);
+        const normalizedRole = String(parsedUser?.role ?? parsedUser?.rol ?? '').toUpperCase();
+        const admin = normalizedRole === 'ADMIN';
+        if (!ignore) {
+          setIsAdmin(admin);
+          setCurrentUserId(parsedUser?.id ?? null);
+        }
 
         const [personelRes, savedRes] = await Promise.all([
           fetch('/api/personel?aktif=true', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
@@ -104,11 +113,13 @@ export default function YetkiliDegerlendirmePage() {
 
         const nextSaved = new Set<string>();
         const nextLocked = new Set<string>();
+        const nextOwnerMap: Record<string, string> = {};
         if (savedRes.ok) {
           const savedData = (await savedRes.json()) as { items?: SavedItem[] };
           for (const item of savedData.items ?? []) {
             nextSaved.add(item.personelId);
             if (item.kilitlendi) nextLocked.add(item.personelId);
+            if (item.yetkiliId) nextOwnerMap[item.personelId] = item.yetkiliId;
             if (item.cevaplar && nextAnswers[item.personelId]) {
               for (const [k, v] of Object.entries(item.cevaplar)) {
                 if (!v) continue;
@@ -123,6 +134,7 @@ export default function YetkiliDegerlendirmePage() {
           setAnswers(nextAnswers);
           setSavedIds(nextSaved);
           setLockedIds(nextLocked);
+          setOwnerByPersonelId(nextOwnerMap);
         }
       } catch (err) {
         if (!ignore) {
@@ -131,6 +143,7 @@ export default function YetkiliDegerlendirmePage() {
           setAnswers({});
           setSavedIds(new Set());
           setLockedIds(new Set());
+          setOwnerByPersonelId({});
         }
       } finally {
         if (!ignore) setLoading(false);
@@ -160,7 +173,10 @@ export default function YetkiliDegerlendirmePage() {
   const selectedPersonel = currentList.find((p) => p.id === selectedId) ?? null;
   const questions = selectedPersonel?.unvan === 'usta' ? USTA_QUESTIONS : CIRAK_QUESTIONS;
   const selectedLocked = selectedPersonel ? lockedIds.has(selectedPersonel.id) : false;
-  const canOverwriteLocked = isAdmin && forceOverwrite;
+  const selectedOwnerId = selectedPersonel ? ownerByPersonelId[selectedPersonel.id] : undefined;
+  const isOwner = Boolean(selectedOwnerId && currentUserId && selectedOwnerId === currentUserId);
+  const canEditLocked = isAdmin || isOwner || (isAdmin && forceOverwrite);
+  const canDeleteSelectedRecord = Boolean(selectedPersonel && savedIds.has(selectedPersonel.id) && (isAdmin || isOwner));
 
   function setAnswer(questionKey: string, value: Answer) {
     if (!selectedPersonel) return;
@@ -175,6 +191,10 @@ export default function YetkiliDegerlendirmePage() {
 
   async function handleSave(): Promise<boolean> {
     if (!selectedPersonel) return false;
+    if (selectedLocked && !canEditLocked) {
+      setError('Bu kayit kilitli. Sadece kaydi olusturan yetkili veya admin guncelleyebilir.');
+      return false;
+    }
 
     setSaving(true);
     try {
@@ -189,7 +209,7 @@ export default function YetkiliDegerlendirmePage() {
           personelId: selectedPersonel.id,
           ay,
           cevaplar: answers[selectedPersonel.id] ?? {},
-          forceOverwrite: canOverwriteLocked,
+          forceOverwrite: isAdmin && forceOverwrite,
         }),
       });
 
@@ -198,7 +218,18 @@ export default function YetkiliDegerlendirmePage() {
         throw new Error(body?.error || 'Kayıt başarısız');
       }
 
-      setSavedIds((prev) => { const next = new Set(prev); next.add(selectedPersonel.id); return next; });
+      const body = (await res.json().catch(() => ({}))) as { yetkiliId?: string };
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        next.add(selectedPersonel.id);
+        return next;
+      });
+      if (body.yetkiliId) {
+        setOwnerByPersonelId((prev) => ({
+          ...prev,
+          [selectedPersonel.id]: body.yetkiliId as string,
+        }));
+      }
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kayıt başarısız');
@@ -248,11 +279,11 @@ export default function YetkiliDegerlendirmePage() {
 
   async function handleDelete() {
     if (!selectedPersonel) return;
-    if (!isAdmin) {
-      setError('Sadece adminler kayıt silebilir');
+    if (!canDeleteSelectedRecord) {
+      setError('Bu kaydi sadece olusturan yetkili veya admin silebilir');
       return;
     }
-    if (!confirm(`${selectedPersonel.ad} için ${monthLabel(ay)} değerlendirmesini silmek istediğinize emin misiniz?`)) {
+    if (!confirm(`${selectedPersonel.ad} icin ${monthLabel(ay)} degerlendirmesini silmek istediginize emin misiniz?`)) {
       return;
     }
 
@@ -260,10 +291,13 @@ export default function YetkiliDegerlendirmePage() {
     setError(null);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const res = await fetch(`/api/puanlama/yetkili?personelId=${selectedPersonel.id}&ay=${ay}`, {
+      const res = await fetch(
+        `/api/puanlama/yetkili?personelId=${encodeURIComponent(selectedPersonel.id)}&ay=${encodeURIComponent(ay)}`,
+        {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+        }
+      );
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -273,6 +307,11 @@ export default function YetkiliDegerlendirmePage() {
       setSavedIds((prev) => {
         const next = new Set(prev);
         next.delete(selectedPersonel.id);
+        return next;
+      });
+      setOwnerByPersonelId((prev) => {
+        const next = { ...prev };
+        delete next[selectedPersonel.id];
         return next;
       });
       setReloadKey((v) => v + 1);
@@ -377,8 +416,8 @@ export default function YetkiliDegerlendirmePage() {
             <>
               {selectedLocked && (
                 <div className="card surface-panel" style={{ marginBottom: 'var(--space-md)' }}>
-                  Bu personelin {monthLabel(ay)} değerlendirmesi kilitli.
-                  {!isAdmin && ' Sadece görüntüleyebilirsiniz.'}
+                  Bu personelin {monthLabel(ay)} degerlendirmesi kilitli.
+                  {!canEditLocked && ' Sadece kaydi olusturan yetkili veya admin guncelleyebilir.'}
                 </div>
               )}
 
@@ -409,7 +448,7 @@ export default function YetkiliDegerlendirmePage() {
                           key={opt.value}
                           type="button"
                           className={value === opt.value ? 'btn btn-primary' : 'btn btn-secondary'}
-                          disabled={selectedLocked && !canOverwriteLocked}
+                          disabled={selectedLocked && !canEditLocked}
                           onClick={() => setAnswer(q.key, opt.value)}
                         >
                           {opt.label}
@@ -421,7 +460,7 @@ export default function YetkiliDegerlendirmePage() {
               })}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {isAdmin && savedIds.has(selectedPersonel.id) && !selectedLocked && (
+                {canDeleteSelectedRecord && (
                   <button
                     type="button"
                     className="btn btn-error"
@@ -429,7 +468,7 @@ export default function YetkiliDegerlendirmePage() {
                     disabled={saving}
                     style={{ background: 'var(--color-error)', color: 'white' }}
                   >
-                    {saving ? 'Siliniyor...' : 'Kaydı Sil'}
+                    {saving ? 'Siliniyor...' : 'Kaydi Sil'}
                   </button>
                 )}
                 <div style={{ display: 'flex', gap: 'var(--space-sm)', marginLeft: 'auto' }}>
@@ -440,7 +479,7 @@ export default function YetkiliDegerlendirmePage() {
                     type="button"
                     className="btn btn-success"
                     onClick={handleSave}
-                    disabled={saving || (selectedLocked && !canOverwriteLocked)}
+                    disabled={saving || (selectedLocked && !canEditLocked)}
                   >
                     {saving ? 'Kaydediliyor...' : 'Kaydet'}
                   </button>
@@ -453,4 +492,3 @@ export default function YetkiliDegerlendirmePage() {
     </div>
   );
 }
-

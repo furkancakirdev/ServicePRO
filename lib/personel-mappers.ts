@@ -37,4 +37,3 @@ export function mapUnvanToDb(value: string | null | undefined): PersonelUnvan {
 export function mapRolToDb(value: string | null | undefined): 'teknisyen' | 'yetkili' {
   return (value ?? '').toLowerCase().trim() === 'yetkili' ? 'yetkili' : 'teknisyen';
 }
-

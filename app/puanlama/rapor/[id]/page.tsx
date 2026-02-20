@@ -29,7 +29,7 @@ const raporAlanlari: { key: RaporAlanKey; label: string }[] = [
     { key: 'stokMalzeme', label: 'Stok Malzeme kaydedildi mi?' },
 ];
 
-const puanDisiAlanlar: { key: 'saatiOlmayanUnitePuanDisi' | 'adamSaatUygulanmazPuanDisi'; label: string; conditionField?: RaporAlanKey }[] = [
+const puanDisiAlanlar: { key: 'saatiOlmayanUnitePuanDisi' | 'adamSaatUygulanmazPuanDisi'; label: string; conditionField: RaporAlanKey }[] = [
     {
         key: 'saatiOlmayanUnitePuanDisi',
         label: 'Saati olmayan ünite (puan dışı)',
@@ -169,7 +169,6 @@ export default function KapanisRaporPage() {
                         </h4>
                         {puanDisiAlanlar.map((alan) => {
                             const isChecked = rapor[alan.key] === true;
-                            const conditionMet = !alan.conditionField || rapor[alan.conditionField] === false;
                             const isEnabled = !alan.conditionField || !rapor[alan.conditionField];
 
                             return (
@@ -345,7 +344,6 @@ export default function KapanisRaporPage() {
         </div>
     );
 }
-
 
 
 

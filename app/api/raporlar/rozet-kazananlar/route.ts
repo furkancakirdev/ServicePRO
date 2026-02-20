@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 // GET: Rozet kazananları
-// Query params: ?ay=2026-02 veya ?yil=2026
+// Query params: 'ay=2026-02 veya 'yil=2026
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);

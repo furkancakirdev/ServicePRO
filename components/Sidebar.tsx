@@ -2,18 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/lib/components/ui';
 import { normalizeRole } from '@/lib/auth/role';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
-// Icons as SVG components
 const Icons = {
   Dashboard: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -95,6 +95,7 @@ interface NavItem {
   label: string;
   icon: keyof typeof Icons;
   badge?: string;
+  minimumRole?: 'YETKILI' | 'ADMIN';
 }
 
 interface NavSection {
@@ -105,44 +106,39 @@ interface NavSection {
 interface User {
   id: string;
   ad: string;
-  rol: 'ADMIN' | 'YETKILI' | 'TEKNIisyEN' | 'MUSTERI';
+  rol: 'ADMIN' | 'YETKILI' | 'TEKNISYEN' | 'MUSTERI';
   email?: string;
 }
 
 const navSections: NavSection[] = [
   {
     title: 'Genel',
-    items: [
-      { href: '/', label: 'Kontrol Merkezi', icon: 'Dashboard' },
-    ],
+    items: [{ href: '/', label: 'Ana Ekran', icon: 'Dashboard' }],
   },
   {
-    title: 'Operasyon',
+    title: 'Servis',
     items: [
-      { href: '/servisler', label: 'Servisler', icon: 'Calendar', badge: '5' },
-      { href: '/takvim', label: 'Operasyon Gorunumu', icon: 'Calendar' },
-      { href: '/personel', label: 'Personel', icon: 'Users' },
+      { href: '/servisler', label: 'Servisler', icon: 'Calendar' },
+      { href: '/personel', label: 'Ekip', icon: 'Users' },
     ],
   },
   {
     title: 'Performans',
     items: [
       { href: '/puanlama', label: 'Puanlama', icon: 'Star' },
-      { href: '/puanlama/gecmis', label: 'Geçmiş & Klasman', icon: 'Trophy' },
+      { href: '/puanlama/gecmis', label: 'Gecmis', icon: 'Trophy' },
     ],
   },
   {
     title: 'Raporlar',
     items: [
-      { href: '/raporlar/performans', label: 'Aylık Performans', icon: 'Document' },
-      { href: '/raporlar/rozetler', label: 'Rozet Kazananları', icon: 'Trophy' },
+      { href: '/raporlar/performans', label: 'Performans', icon: 'Document' },
+      { href: '/raporlar/rozetler', label: 'Rozetler', icon: 'Trophy' },
     ],
   },
   {
     title: 'Yönetim',
-    items: [
-      { href: '/ayarlar', label: 'Ayarlar', icon: 'Settings' },
-    ],
+    items: [{ href: '/ayarlar', label: 'Ayarlar', icon: 'Settings', minimumRole: 'YETKILI' }],
   },
 ];
 
@@ -166,33 +162,48 @@ export default function Sidebar() {
     setIsHydrated(true);
   }, []);
 
+  const normalizedUserRole = normalizeRole(user?.rol ?? '');
+
+  const visibleSections = useMemo(
+    () =>
+      navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => {
+            const minimumRole = item.minimumRole ?? 'YETKILI';
+            if (minimumRole === 'YETKILI') return true;
+            return isHydrated && normalizedUserRole === 'ADMIN';
+          }),
+        }))
+        .filter((section) => section.items.length > 0),
+    [isHydrated, normalizedUserRole]
+  );
+
   const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
-    }
+    if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
   const getRoleLabel = (role: string) => {
-    const normalizedRole = normalizeRole(role) ?? role;
+    const normalized = normalizeRole(role) ?? role;
     const labels: Record<string, string> = {
       ADMIN: 'Admin',
       YETKILI: 'Yetkili',
-      TEKNIisyEN: 'Teknisyen',
+      TEKNISYEN: 'Teknisyen',
       MUSTERI: 'Müşteri',
     };
-    return labels[normalizedRole] || normalizedRole;
+    return labels[normalized] || normalized;
   };
 
   const getRoleColor = (role: string) => {
-    const normalizedRole = normalizeRole(role) ?? role;
+    const normalized = normalizeRole(role) ?? role;
     const colors: Record<string, string> = {
       ADMIN: 'var(--color-warning)',
       YETKILI: 'var(--color-primary)',
-      TEKNIisyEN: 'var(--color-success)',
+      TEKNISYEN: 'var(--color-success)',
       MUSTERI: 'var(--color-info)',
     };
-    return colors[normalizedRole] || 'var(--color-text-muted)';
+    return colors[normalized] || 'var(--color-text-muted)';
   };
 
   const handleLogout = () => {
@@ -202,17 +213,6 @@ export default function Sidebar() {
       window.location.href = '/login';
     }
   };
-
-  const visibleSections = navSections.filter((section) => {
-    // Admin-only sections
-    if (
-      section.title === 'Yönetim' &&
-      (!isHydrated || (normalizeRole(user?.rol ?? '') ?? user?.rol) !== 'ADMIN')
-    ) {
-      return false;
-    }
-    return true;
-  });
 
   return (
     <aside className="sidebar">
@@ -230,31 +230,32 @@ export default function Sidebar() {
         {visibleSections.map((section) => (
           <div key={section.title} className="sidebar-section">
             <div className="sidebar-section-title">{section.title}</div>
-            {section.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`sidebar-link ${isActive(item.href) ? 'active' : ''}`}
-              >
-                <span className="sidebar-icon">
-                  {Icons[item.icon]()}
-                </span>
-                <span className="sidebar-label">{item.label}</span>
-                {item.badge && (
-                  <span className="sidebar-badge">{item.badge}</span>
-                )}
-              </Link>
-            ))}
+            {section.items.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-link ${active ? 'active' : ''}`}
+                  aria-label={item.label}
+                  aria-current={active ? 'page' : undefined}
+                  title={item.label}
+                >
+                  <span className="sidebar-icon">{Icons[item.icon]()}</span>
+                  <span className="sidebar-label">{item.label}</span>
+                  {item.badge ? <span className="sidebar-badge">{item.badge}</span> : null}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>
 
-      {/* User Profile Dropdown */}
-      {user && (
+      {user ? (
         <div className="sidebar-user">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="sidebar-user-trigger">
+              <button className="sidebar-user-trigger" data-testid="sidebar-user-menu-trigger">
                 <div
                   className="sidebar-user-avatar"
                   style={{ backgroundColor: getRoleColor(user.rol) }}
@@ -268,7 +269,11 @@ export default function Sidebar() {
                 <Icons.ChevronDown />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent
+              align="end"
+              className="w-56 border-border bg-popover text-popover-foreground"
+              data-testid="sidebar-user-menu-content"
+            >
               <DropdownMenuLabel>Hesap</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
@@ -282,19 +287,19 @@ export default function Sidebar() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <Icons.Logout />
                 <span>Çıkış Yap</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      )}
+      ) : null}
 
       <div className="sidebar-footer">
+        <ThemeSwitcher />
         <span className="sidebar-version">v6.0</span>
       </div>
     </aside>
   );
 }
-

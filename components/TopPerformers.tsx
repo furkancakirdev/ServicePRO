@@ -1,78 +1,99 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { LeaderboardEntry } from '@/components/Leaderboard';
+import { MiniLeaderboard } from '@/components/Leaderboard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Performer {
-    id: string;
-    ad: string;
-    puan: number;
-    servisSayisi: number;
-    rozet?: 'ALTIN' | 'GUMUS' | 'BRONZ';
+  id: string;
+  ad: string;
+  puan: number;
+  servisSayisi: number;
+  rozet?: 'ALTIN' | 'GUMUS' | 'BRONZ';
 }
 
-// Mock data
-const mockPerformers: Performer[] = [
-    { id: '1', ad: 'İbrahim Yayalık', puan: 94, servisSayisi: 28, rozet: 'ALTIN' },
-    { id: '2', ad: 'Alican Yaylalı', puan: 91, servisSayisi: 24, rozet: 'GUMUS' },
-    { id: '3', ad: 'Mehmet Güven', puan: 88, servisSayisi: 26, rozet: 'BRONZ' },
-];
-
-const rozetConfig = {
-    ALTIN: { emoji: '🥇', color: '#fbbf24' },
-    GUMUS: { emoji: '🥈', color: '#9ca3af' },
-    BRONZ: { emoji: '🥉', color: '#d97706' },
+type PuanlamaItem = {
+  personelId: string;
+  personel: string;
+  toplamPuan: number;
+  servis: number;
 };
 
+const rozetConfig = {
+  ALTIN: { emoji: '🥇', color: '#D4AF37' },
+  GUMUS: { emoji: '🥈', color: '#C0C0C0' },
+  BRONZ: { emoji: '🥉', color: '#B87333' },
+};
+
+/**
+ * TopPerformers Dashboard Widget
+ *
+ * Shows weekly performance leaderboard with Grand Maritime styling
+ */
 export default function TopPerformers() {
-    return (
-        <div className="card">
-            <div className="card-header">
-                <h3 className="card-title">🏆 Bu Ay En İyiler</h3>
-                <Link href="/puanlama" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                    Detay →
-                </Link>
-            </div>
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-                {mockPerformers.map((p, index) => (
-                    <div
-                        key={p.id}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-md)',
-                            padding: 'var(--space-sm)',
-                            borderRadius: 'var(--radius-md)',
-                            background: index === 0 ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'var(--color-bg)',
-                        }}
-                    >
-                        <div style={{
-                            fontSize: '1.5rem',
-                            width: '40px',
-                            textAlign: 'center',
-                        }}>
-                            {p.rozet ? rozetConfig[p.rozet].emoji : `${index + 1}.`}
-                        </div>
+  useEffect(() => {
+    async function load() {
+      try {
+        const now = new Date();
+        const ay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>
-                                {p.ad}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                {p.servisSayisi} servis
-                            </div>
-                        </div>
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const res = await fetch(`/api/puanlama/aylik?ay=${encodeURIComponent(ay)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
 
-                        <div style={{
-                            fontWeight: 700,
-                            fontSize: '1.1rem',
-                            color: 'var(--color-primary)',
-                        }}>
-                            {p.puan}
-                        </div>
-                    </div>
-                ))}
-            </div>
+        if (res.ok) {
+          const data = await res.json() as { items: PuanlamaItem[] };
+          const leaderboardEntries: LeaderboardEntry[] = (data.items || []).slice(0, 5).map((item, index) => ({
+            rank: index + 1,
+            personnelId: item.personelId,
+            personnelName: item.personel,
+            score: item.toplamPuan,
+            serviceCount: item.servis,
+          }));
+          setEntries(leaderboardEntries);
+        }
+      } catch (error) {
+        console.error('Top performers yüklenemedi:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  return (
+    <Card className="border-l-4 border-l-gold-500">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <span>🏆</span>
+            <span className="font-display text-lg">Haftalık Performans</span>
+          </CardTitle>
+          <Link
+            href="/puanlama"
+            className="text-sm text-navy-700 hover:text-gold-600 hover:underline"
+          >
+            Detay →
+          </Link>
         </div>
-    );
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-navy-200 border-t-navy-700" />
+          </div>
+        ) : entries.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">Bu ay için veri bulunamadı</p>
+        ) : (
+          <MiniLeaderboard entries={entries} maxEntries={5} />
+        )}
+      </CardContent>
+    </Card>
+  );
 }

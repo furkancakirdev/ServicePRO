@@ -11,8 +11,8 @@ interface DatePresetFilterProps {
 }
 
 const PRESET_ITEMS: Array<{ value: DatePreset; label: string }> = [
-  { value: 'BUGUN', label: 'Bugun' },
-  { value: 'YARIN', label: 'Yarin' },
+  { value: 'BUGUN', label: 'Bugün' },
+  { value: 'YARIN', label: 'Yarın' },
   { value: 'BU_HAFTA', label: 'Bu Hafta' },
 ];
 

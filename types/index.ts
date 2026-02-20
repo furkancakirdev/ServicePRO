@@ -12,11 +12,27 @@ export type ServisDurumu =
   | 'IPTAL'
   | 'ERTELENDI';
 
+// Dinamik ayarlara geçişte geriye dönük uyumluluk için legacy liste korunur.
+export const LEGACY_SERVIS_DURUMLARI = [
+  'RANDEVU_VERILDI',
+  'DEVAM_EDIYOR',
+  'PARCA_BEKLIYOR',
+  'MUSTERI_ONAY_BEKLIYOR',
+  'RAPOR_BEKLIYOR',
+  'KESIF_KONTROL',
+  'TAMAMLANDI',
+  'IPTAL',
+  'ERTELENDI',
+] as const;
+
+export type DinamikServisDurumu = string;
+
 export const DURUM_CONFIG =
   CENTRAL_DURUM_CONFIG as unknown as Record<ServisDurumu, { label: string; color: string; bgColor: string; icon: string }>;
 
 // ==================== KONUM GRUPLARI ====================
 export type KonumGrubu = 'YATMARIN' | 'NETSEL' | 'DIS_SERVIS';
+export type DinamikKonumAnahtari = string;
 
 export const KONUM_CONFIG: Record<KonumGrubu, { label: string; color: string; icon: string }> = {
   YATMARIN: { label: 'Yatmarin (Merkez)', color: '#0f766e', icon: 'YM' },
@@ -42,6 +58,9 @@ export const IS_TURU_CONFIG: Record<IsTuru, { label: string; carpan: number }> =
 
 // ==================== PERSONEL ====================
 export type PersonelUnvan = 'usta' | 'cirak' | 'yonetici' | 'ofis';
+
+export const LEGACY_PERSONEL_UNVANLARI = ['usta', 'cirak', 'yonetici', 'ofis'] as const;
+export type DinamikPersonelUnvan = string;
 
 export interface Personnel {
   id: string;
@@ -79,6 +98,10 @@ export interface ParcaBekleme {
   miktar: number;
   tedarikci?: string;
   beklenenTarih?: string;
+  kategori?: 'TASERON_BEKLEYEN' | 'SIPARIS_EDILEN_YEDEK';
+  aciklama?: string;
+  tamamlandi?: boolean;
+  etaGun?: number;
 }
 
 export interface Service {
@@ -109,8 +132,8 @@ export interface KapanisRaporu {
   adamSaat: boolean;
   taseronBilgisi: boolean;
   stokMalzeme: boolean;
-  saatiOlmayanUnitePuanDisi: boolean; // "Ünite saati yazılmış mı?" sorusuna HAYİR denirse tiklenebilir (puan dışı)
-  adamSaatUygulanmazPuanDisi: boolean; // "Harcanan süre adam/saat belirtilmiş mi?" sorusuna dahil (puan dışı)
+  saatiOlmayanUnitePuanDisi: boolean; // "Ünite saati yazılmış mı'" sorusuna HAYİR denirse tiklenebilir (puan dışı)
+  adamSaatUygulanmazPuanDisi: boolean; // "Harcanan süre adam/saat belirtilmiş mi'" sorusuna dahil (puan dışı)
   aciklama: string;
   raporlayanPersonel: string;
   raporTarihi: string;
@@ -353,4 +376,4 @@ export const TUM_PERSONEL: Personnel[] = [
   { id: '17', ad: 'Mustafa Yıldız', rol: 'teknisyen', unvan: 'cirak', aktif: true },
 ];
 
-
+export type { PageActionModel, UiDensityMode, UiHintConfig } from './ui';

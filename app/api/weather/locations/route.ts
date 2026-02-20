@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   const url =
     `https://geocoding-api.open-meteo.com/v1/search` +
-    `?name=${encodeURIComponent(query)}` +
+    `'name=${encodeURIComponent(query)}` +
     `&count=8&language=tr&format=json`;
 
   try {

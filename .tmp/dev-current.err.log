@@ -1,0 +1,98 @@
+(node:24968) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ⨯ ./lib/rbac/permissions.ts
+Error: Failed to read source code from C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\lib\rbac\permissions.ts
+
+Caused by:
+    Sistem belirtilen dosyayı bulamıyor. (os error 2)
+
+Import trace for requested module:
+./lib/rbac/permissions.ts
+./lib/rbac/rbac.ts
+./components/auth/ProtectedComponents.tsx
+ ⨯ ./lib/rbac/permissions.ts
+Error: Failed to read source code from C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\lib\rbac\permissions.ts
+
+Caused by:
+    Sistem belirtilen dosyayı bulamıyor. (os error 2)
+
+Import trace for requested module:
+./lib/rbac/permissions.ts
+./lib/rbac/rbac.ts
+./components/auth/ProtectedComponents.tsx
+ ⨯ ./components/Sidebar.tsx
+Error: Failed to read source code from C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\components\Sidebar.tsx
+
+Caused by:
+    Sistem belirtilen dosyayı bulamıyor. (os error 2)
+
+Import trace for requested module:
+./components/Sidebar.tsx
+./app/layout.tsx
+ ⨯ ./components/Sidebar.tsx
+Error: Failed to read source code from C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\components\Sidebar.tsx
+
+Caused by:
+    Sistem belirtilen dosyayı bulamıyor. (os error 2)
+
+Import trace for requested module:
+./components/Sidebar.tsx
+./app/layout.tsx
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ./app/ayarlar/page.tsx
+Error: 
+  [31mx[0m Expected '}', got '<eof>'
+     ,-[[36;1;4mC:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\app\ayarlar\page.tsx[0m:198:1]
+ [2m198[0m |   const [savingSettings, setSavingSettings] = useState(false);
+ [2m199[0m | 
+ [2m200[0m |   const canRunValidation = isAdmin || settings.access.yetkiliCanRunSyncValidation;
+ [2m201[0m |   const canViewSyncLogs = isAdmin || settings.access.yetkiliCanViewSyncLogs;
+     : [31;1m                                                                           ^[0m
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/ayarlar/page.tsx
+ ⨯ ./app/ayarlar/page.tsx
+Error: 
+  [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\app\ayarlar\page.tsx[0m:389:1]
+ [2m389[0m |   }
+ [2m390[0m | 
+ [2m391[0m |   return (
+ [2m392[0m |     <div className="space-y-6">
+     : [31;1m     ^^^[0m
+ [2m393[0m |       <header className="hero-panel flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+ [2m394[0m |         <div>
+ [2m395[0m |           <h1 className="page-title">Sistem Ayarları ve Yönetim</h1>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/ayarlar/page.tsx
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ./app/ayarlar/page.tsx
+Error: 
+  [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\app\ayarlar\page.tsx[0m:389:1]
+ [2m389[0m |   }
+ [2m390[0m | 
+ [2m391[0m |   return (
+ [2m392[0m |     <div className="space-y-6">
+     : [31;1m     ^^^[0m
+ [2m393[0m |       <header className="hero-panel flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+ [2m394[0m |         <div>
+ [2m395[0m |           <h1 className="page-title">Sistem Ayarları ve Yönetim</h1>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/ayarlar/page.tsx
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.

@@ -83,7 +83,11 @@ export function sanitizePlanlamaRow(
 
   const dateResult = parseSmartDateToUtcDate(input.tarih);
   if (dateResult.usedFallback) {
-    warnings.push(`date_fallback:${dateResult.source}`);
+    warnings.push(`date_fallback:${dateResult.source}:${dateResult.raw}`);
+  }
+  // Tarih parse hatası detaylı loglama
+  if (!dateResult.date && input.tarih) {
+    warnings.push(`date_parse_failed:${String(input.tarih).trim()}`);
   }
 
   const statusResult = mapSheetStatusToDbStatus(input.durum);

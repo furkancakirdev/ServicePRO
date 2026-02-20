@@ -1,11 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSyncManager } from '@/lib/sync/sync-manager';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { readSettings } from '@/lib/settings/settings-store';
 import { prisma } from '@/lib/prisma';
+import { createSyncManager } from '@/lib/sync/sync-manager';
+
+export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, ['ADMIN']);
   if (!auth.ok) return auth.response;
+
+  const settings = readSettings();
+  if (!settings.sync.enabled) {
+    return NextResponse.json(
+      { error: 'Sync işlemleri ayarlardan devre dışı bırakıldı' },
+      { status: 409 }
+    );
+  }
+
+  if (!settings.sync.allowFullReset) {
+    return NextResponse.json(
+      { error: 'Full reset işlemi ayarlardan kapalı' },
+      { status: 403 }
+    );
+  }
 
   const body = await request.json().catch(() => ({}));
   if (body?.confirm !== true) {
@@ -20,10 +39,10 @@ export async function POST(request: NextRequest) {
 
   const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
+  const scope = body?.scope === 'all' ? 'all' : 'sheet-only';
 
   try {
     const syncManager = await createSyncManager();
-
     if (!syncManager) {
       return NextResponse.json(
         { error: 'Google Sheets credentials not configured' },
@@ -32,35 +51,63 @@ export async function POST(request: NextRequest) {
     }
 
     const beforeServiceCount = await prisma.service.count();
+    const beforeSheetServiceCount = await prisma.service.count({
+      where: { id: { startsWith: 'sheet-svc-' } },
+    });
 
-    // PLANLAMA full_reset mode:
-    // 1) Deletes all service records
-    // 2) Re-imports data from Google Sheets from scratch
-    const result = await syncManager.syncFromSheets('PLANLAMA', {
-      mode: 'full_reset',
-      runId,
+    let result;
+    let deletedByScope = 0;
+
+    if (scope === 'sheet-only') {
+      const deleted = await prisma.service.deleteMany({
+        where: { id: { startsWith: 'sheet-svc-' } },
+      });
+      deletedByScope = deleted.count;
+
+      await prisma.tekne.updateMany({
+        where: { id: { startsWith: 'sheet-tekne-' } },
+        data: { aktif: false },
+      });
+
+      result = await syncManager.syncFromSheets('PLANLAMA', {
+        mode: 'incremental',
+        runId,
+      });
+    } else {
+      result = await syncManager.syncFromSheets('PLANLAMA', {
+        mode: 'full_reset',
+        runId,
+      });
+      deletedByScope = result.deleted;
+    }
+
+    const validation = await syncManager.validatePlanlamaAgainstDb({
+      includeAllSamples: true,
     });
 
     const finishedAt = new Date().toISOString();
     return NextResponse.json({
       runId,
-      mode: 'full_reset',
+      mode: scope === 'sheet-only' ? 'sheet_only_reset' : 'full_reset',
+      scope,
       sheet: 'PLANLAMA',
       startedAt,
       finishedAt,
-      success: result.success,
+      success: result.success && validation.ok === true,
       totals: {
         created: result.created,
         updated: result.updated,
-        deleted: result.deleted,
+        deleted: deletedByScope,
         skipped: result.skipped,
         errors: result.errors.length,
       },
       summary: {
         servicesBeforeReset: beforeServiceCount,
-        servicesDeleted: result.deleted,
+        sheetServicesBeforeReset: beforeSheetServiceCount,
+        servicesDeleted: deletedByScope,
         servicesImported: result.created,
       },
+      validation,
       result,
       errors: result.errors,
     });

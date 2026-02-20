@@ -1,164 +1,218 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Service } from '@/types';
-import { generateYarinRaporu, generateHaftaRaporu, getDevamEdenler } from '@/lib/report-generator';
+import {
+  WhatsAppTemplateVariant,
+  generateTechnicalTeamTemplate,
+  getDevamEdenler,
+  selectServicesByTemplate,
+} from '@/lib/report-generator';
 
-// Mock data
-const mockServices: Service[] = [
-    {
-        id: '1', tarih: '2026-01-15', saat: '09:30', tekneAdi: 'S/Y BELLA BLUE',
-        adres: 'NETSEL', yer: 'L Pontonu', servisAciklamasi: 'Motor Rutin Bakım',
-        isTuru: 'PAKET', durum: 'DEVAM_EDIYOR', atananPersonel: [],
-    },
-    {
-        id: '2', tarih: '2026-01-15', saat: '11:00', tekneAdi: 'M/V ARIEL',
-        adres: 'YATMARİN', yer: 'Kara', servisAciklamasi: 'Seakeeper Kontrol',
-        isTuru: 'ARIZA', durum: 'DEVAM_EDIYOR', atananPersonel: [],
-    },
-    {
-        id: '3', tarih: '2026-01-15', saat: '14:00', tekneAdi: 'CAT. HELIOS',
-        adres: 'BOZBURUN', yer: 'DSV', servisAciklamasi: 'Pasarella Montajı',
-        isTuru: 'PROJE', durum: 'DEVAM_EDIYOR', atananPersonel: [],
-    },
-    {
-        id: '4', tarih: '2026-01-14', tekneAdi: 'M/V PACE',
-        adres: 'GÖCEK', yer: 'D-Marin', servisAciklamasi: 'Jeneratör',
-        isTuru: 'ARIZA', durum: 'PARCA_BEKLIYOR', atananPersonel: [],
-    },
-    {
-        id: '5', tarih: '2026-01-13', tekneAdi: 'S/Y DAISY',
-        adres: 'NETSEL', yer: 'Atölye', servisAciklamasi: 'Kuyruk Bakımı',
-        isTuru: 'PAKET', durum: 'RAPOR_BEKLIYOR', atananPersonel: [],
-    },
+const TAB_OPTIONS: Array<{ value: WhatsAppTemplateVariant; label: string }> = [
+  { value: 'bugun', label: 'Bugun' },
+  { value: 'yarin', label: 'Yarin' },
+  { value: 'haftalik', label: 'Bu Hafta' },
 ];
 
 export default function WhatsAppRaporPage() {
-    const [activeTab, setActiveTab] = useState<'yarin' | 'hafta'>('yarin');
-    const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<WhatsAppTemplateVariant>('bugun');
+  const [copied, setCopied] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const yarinServisler = mockServices.filter(s => s.tarih === '2026-01-15');
-    const devamEdenler = getDevamEdenler(mockServices);
+  useEffect(() => {
+    let ignore = false;
 
-    const raporMetni = activeTab === 'yarin'
-        ? generateYarinRaporu(yarinServisler, devamEdenler)
-        : generateHaftaRaporu(mockServices, devamEdenler);
+    async function loadServices() {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const handleCopy = async () => {
-        await navigator.clipboard.writeText(raporMetni);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const response = await fetch(
+          '/api/services?limit=2000&durum=RANDEVU_VERILDI,DEVAM_EDIYOR&sort=tarih&order=asc',
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }
+        );
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Servis listesi alinamadi');
+        }
+
+        if (!ignore) {
+          setServices(Array.isArray(payload.services) ? (payload.services as Service[]) : []);
+        }
+      } catch (loadError) {
+        if (!ignore) {
+          setError(loadError instanceof Error ? loadError.message : 'Veri yuklenemedi');
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
+    void loadServices();
+    return () => {
+      ignore = true;
     };
+  }, []);
 
-    return (
-        <div className="animate-fade-in">
-            <header className="hero-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-                <div className="hero-content">
-                    <div>
-                        <h1 className="hero-title">WhatsApp Rapor Çıktısı</h1>
-                        <p className="hero-subtitle">Kopyalayıp WhatsApp grubuna yapıştırın</p>
-                    </div>
-                </div>
-            </header>
+  const reportText = useMemo(
+    () =>
+      generateTechnicalTeamTemplate({
+        variant: activeTab,
+        services,
+      }),
+    [activeTab, services]
+  );
 
-            {/* Tabs */}
-            <div style={{
-                display: 'flex',
-                gap: 'var(--space-sm)',
-                marginBottom: 'var(--space-lg)'
-            }}>
-                <button
-                    onClick={() => setActiveTab('yarin')}
-                    className={activeTab === 'yarin' ? 'btn btn-primary' : 'btn btn-secondary'}
-                >
-                     Yarın
-                </button>
-                <button
-                    onClick={() => setActiveTab('hafta')}
-                    className={activeTab === 'hafta' ? 'btn btn-primary' : 'btn btn-secondary'}
-                >
-                     Haftalık
-                </button>
-            </div>
+  const plannedItems = useMemo(
+    () => selectServicesByTemplate(services, activeTab),
+    [activeTab, services]
+  );
+  const ongoingItems = useMemo(() => getDevamEdenler(services), [services]);
 
-            <div className="grid" style={{ gridTemplateColumns: '1fr 400px', gap: 'var(--space-xl)' }}>
-                {/* Preview */}
-                <div className="surface-panel">
-                    <div className="card-header">
-                        <h3 className="card-title">Önizleme</h3>
-                        <button
-                            className={copied ? 'btn btn-success' : 'btn btn-primary'}
-                            onClick={handleCopy}
-                        >
-                            {copied ? '✓ Kopyalandı!' : ' Kopyala'}
-                        </button>
-                    </div>
+  const whatsappLink = useMemo(
+    () => `https://wa.me/?text=${encodeURIComponent(reportText)}`,
+    [reportText]
+  );
 
-                    <pre style={{
-                        background: '#1e293b',
-                        color: '#e2e8f0',
-                        padding: 'var(--space-lg)',
-                        borderRadius: 'var(--radius-md)',
-                        fontFamily: 'monospace',
-                        fontSize: '0.9rem',
-                        lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
-                        overflowX: 'auto',
-                    }}>
-                        {raporMetni}
-                    </pre>
-                </div>
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(reportText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-                {/* Info */}
-                <div>
-                    <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-                        <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>
-                             Özet
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: 'var(--space-sm)',
-                                background: 'var(--color-bg)',
-                                borderRadius: 'var(--radius-sm)',
-                            }}>
-                                <span>Planlı Servis</span>
-                                <strong>{yarinServisler.length}</strong>
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: 'var(--space-sm)',
-                                background: 'var(--color-bg)',
-                                borderRadius: 'var(--radius-sm)',
-                            }}>
-                                <span>Devam Eden</span>
-                                <strong style={{ color: 'var(--color-warning)' }}>{devamEdenler.length}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="surface-panel">
-                        <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>
-                             Kullanım
-                        </h3>
-                        <ol style={{
-                            paddingLeft: 'var(--space-lg)',
-                            color: 'var(--color-text-muted)',
-                            fontSize: '0.9rem',
-                            lineHeight: 1.8,
-                        }}>
-                            <li>Yukarıdaki &quot;Kopyala&quot; butonuna tıklayın</li>
-                            <li>WhatsApp grubunu açın</li>
-                            <li>Mesaj alanına yapıştırın</li>
-                            <li>Gönderin ✓</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="animate-fade-in">
+      <header className="hero-panel" style={{ marginBottom: 'var(--space-lg)' }}>
+        <div className="hero-content">
+          <div>
+            <h1 className="hero-title">WhatsApp Teknik Ekip Sablonlari</h1>
+            <p className="hero-subtitle">Bugun, yarin ve haftalik planlari tek tikla olusturun.</p>
+          </div>
         </div>
-    );
+      </header>
+
+      <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
+        {TAB_OPTIONS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={activeTab === tab.value ? 'btn btn-primary' : 'btn btn-secondary'}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {error ? (
+        <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)', color: 'var(--color-error)' }}>
+          {error}
+        </div>
+      ) : null}
+
+      <div className="grid" style={{ gridTemplateColumns: '1fr 360px', gap: 'var(--space-xl)' }}>
+        <div className="surface-panel">
+          <div className="card-header">
+            <h3 className="card-title">Onizleme</h3>
+            <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+              <button className={copied ? 'btn btn-success' : 'btn btn-primary'} onClick={handleCopy} type="button">
+                {copied ? 'Kopyalandi' : 'Kopyala'}
+              </button>
+              <a className="btn btn-secondary" href={whatsappLink} target="_blank" rel="noreferrer">
+                WhatsApp&apos;ta Ac
+              </a>
+            </div>
+          </div>
+
+          <pre
+            style={{
+              background: '#1e293b',
+              color: '#e2e8f0',
+              padding: 'var(--space-lg)',
+              borderRadius: 'var(--radius-md)',
+              fontFamily: 'monospace',
+              fontSize: '0.9rem',
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              overflowX: 'auto',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? 'Rapor olusturuluyor...' : reportText}
+          </pre>
+        </div>
+
+        <div>
+          <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>
+              Ozet
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: 'var(--space-sm)',
+                  background: 'var(--color-bg)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <span>Planlanan (Secili Sablon)</span>
+                <strong>{plannedItems.length}</strong>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: 'var(--space-sm)',
+                  background: 'var(--color-bg)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <span>Devam Eden</span>
+                <strong style={{ color: 'var(--color-warning)' }}>{ongoingItems.length}</strong>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: 'var(--space-sm)',
+                  background: 'var(--color-bg)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <span>Filtre Durumlari</span>
+                <strong>RANDEVU_VERILDI + DEVAM_EDIYOR</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="surface-panel">
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>
+              Kullanim
+            </h3>
+            <ol
+              style={{
+                paddingLeft: 'var(--space-lg)',
+                color: 'var(--color-text-muted)',
+                fontSize: '0.9rem',
+                lineHeight: 1.8,
+              }}
+            >
+              <li>Teknik ekip icin rapor turunu secin (Bugun, Yarin, Bu Hafta).</li>
+              <li>Kopyala ile metni panoya alin ya da WhatsApp&apos;ta Ac ile direkt gecin.</li>
+              <li>Grupta mesaji gondermeden once gerekiyorsa kisa duzenleme yapin.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-

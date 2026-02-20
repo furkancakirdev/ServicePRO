@@ -58,7 +58,7 @@ export default function PerformansRaporuPage() {
                 const params = new URLSearchParams({ ay: seciliAy });
                 if (seciliLokasyon && seciliLokasyon !== 'ALL') params.append('lokasyon', seciliLokasyon);
 
-                const response = await fetch(`/api/raporlar/aylik-performans?${params}`);
+                const response = await fetch(`/api/raporlar/aylik-performans'${params}`);
                 if (response.ok) {
                     const data = await response.json();
                     setPerformanslar(data.data || []);
@@ -290,4 +290,3 @@ export default function PerformansRaporuPage() {
         </div>
     );
 }
-

@@ -211,7 +211,7 @@ export class SyncManager {
           if (resolution.warnings.length) {
             fullResetResult.metadata = {
               ...(fullResetResult.metadata ?? {}),
-              warnings: resolution.warnings,
+              warnings: this.mergeWarningLists(fullResetResult.metadata?.warnings, resolution.warnings),
             };
           }
           return fullResetResult;
@@ -222,7 +222,7 @@ export class SyncManager {
         if (resolution.warnings.length) {
           incrementalResult.metadata = {
             ...(incrementalResult.metadata ?? {}),
-            warnings: resolution.warnings,
+            warnings: this.mergeWarningLists(incrementalResult.metadata?.warnings, resolution.warnings),
           };
         }
         return incrementalResult;
@@ -454,8 +454,10 @@ export class SyncManager {
   private async runPlanlamaIncremental(rows: Record<string, unknown>[], runId: string): Promise<SyncResult> {
     let created = 0;
     let updated = 0;
+    let deleted = 0;
     let skipped = 0;
     const errors: SyncResult['errors'] = [];
+    const rowWarnings: string[] = [];
     const preparedRows: Array<{
       id: string;
       tekneId: string;
@@ -465,6 +467,7 @@ export class SyncManager {
 
     for (const row of rows) {
       const sanitized = this.sanitizePlanlamaRecord(row);
+      this.pushRowWarnings(rowWarnings, sanitized.id, sanitized.warnings);
       if (sanitized.skipReason !== 'NONE') {
         skipped++;
         continue;
@@ -595,18 +598,49 @@ export class SyncManager {
       }
     }
 
+    // Sheet'te artık olmayan satırları temizle (stale sheet-svc kayıtlarını tutma).
+    try {
+      const incomingIds = uniquePreparedRows.map((row) => row.id);
+      if (incomingIds.length === 0) {
+        const result = await prisma.service.deleteMany({
+          where: { id: { startsWith: 'sheet-svc-' } },
+        });
+        deleted += result.count;
+      } else {
+        const result = await prisma.service.deleteMany({
+          where: {
+            id: { startsWith: 'sheet-svc-' },
+            NOT: {
+              id: { in: incomingIds },
+            },
+          },
+        });
+        deleted += result.count;
+      }
+    } catch (error) {
+      errors.push({
+        type: 'SYNC_ERROR',
+        message: error instanceof Error ? error.message : 'Stale reconcile failed',
+      });
+    }
+
     return {
       success: errors.length === 0,
       created,
       updated,
-      deleted: 0,
+      deleted,
       skipped,
       errors,
       timestamp: new Date(),
       durationMs: 0,
       sheetName: SHEETS_CONFIG.PLANLAMA.sheetName,
       syncType: 'INCREMENTAL',
-      metadata: { runId, mode: 'incremental', sheetKey: 'PLANLAMA' },
+      metadata: {
+        runId,
+        mode: 'incremental',
+        sheetKey: 'PLANLAMA',
+        warnings: rowWarnings,
+      },
     };
   }
 
@@ -615,6 +649,7 @@ export class SyncManager {
     let created = 0;
     const updated = 0;
     let skipped = 0;
+    const rowWarnings: string[] = [];
 
     const deletedServices = await prisma.service.deleteMany({});
     await prisma.tekne.updateMany({
@@ -632,6 +667,7 @@ export class SyncManager {
 
     for (const row of rows) {
       const sanitized = this.sanitizePlanlamaRecord(row);
+      this.pushRowWarnings(rowWarnings, sanitized.id, sanitized.warnings);
       if (sanitized.skipReason !== 'NONE') {
         skipped++;
         continue;
@@ -705,7 +741,12 @@ export class SyncManager {
       durationMs: 0,
       sheetName: SHEETS_CONFIG.PLANLAMA.sheetName,
       syncType: 'FULL',
-      metadata: { runId, mode: 'full_reset', sheetKey: 'PLANLAMA' },
+      metadata: {
+        runId,
+        mode: 'full_reset',
+        sheetKey: 'PLANLAMA',
+        warnings: rowWarnings,
+      },
     };
   }
 
@@ -976,6 +1017,23 @@ export class SyncManager {
       existing.isTuru === payload.isTuru &&
       existing.deletedAt === (payload.deletedAt ?? null)
     );
+  }
+
+  private pushRowWarnings(target: string[], rowId: string, warnings: string[]): void {
+    if (!warnings?.length) return;
+    const MAX_WARNING_ITEMS = 2000;
+    if (target.length >= MAX_WARNING_ITEMS) return;
+
+    for (const warning of warnings) {
+      if (target.length >= MAX_WARNING_ITEMS) break;
+      target.push(`${warning}|row=${rowId}`);
+    }
+  }
+
+  private mergeWarningLists(primary?: string[], secondary?: string[]): string[] | undefined {
+    const merged = [...(primary ?? []), ...(secondary ?? [])];
+    if (merged.length === 0) return undefined;
+    return Array.from(new Set(merged));
   }
 
   private getDefaultValue(type: string): string | number | boolean | null {

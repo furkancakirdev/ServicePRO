@@ -57,7 +57,7 @@ export default function RozetKazananlariPage() {
                 }
 
                 // Yıllık klasman
-                const yillikRes = await fetch(`/api/raporlar/rozet-kazananlar?yil=${buYil}`);
+                const yillikRes = await fetch(`/api/raporlar/rozet-kazananlar'yil=${buYil}`);
                 if (yillikRes.ok) {
                     const data = await yillikRes.json();
                     setYillikKlasman(data.data || []);
@@ -256,4 +256,3 @@ export default function RozetKazananlariPage() {
         </div>
     );
 }
-

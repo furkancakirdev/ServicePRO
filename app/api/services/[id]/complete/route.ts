@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { z } from 'zod';
@@ -22,11 +22,13 @@ const completeRequestSchema = z.object({
   kaliteKontrol: z.object({
     uniteModelVar: z.boolean(),
     uniteSaatiVar: z.boolean().default(false),
-    uniteSaatiMuaf: z.boolean().default(false),
+    uniteSaatiExcludeFromScoring: z.boolean().optional(),
+    uniteSaatiMuaf: z.boolean().optional(),
     uniteSeriNoVar: z.boolean(),
     aciklamaYeterli: z.boolean(),
     adamSaatVar: z.boolean().default(false),
-    adamSaatMuaf: z.boolean().default(false),
+    adamSaatExcludeFromScoring: z.boolean().optional(),
+    adamSaatMuaf: z.boolean().optional(),
     fotograflarVar: z.boolean(),
   }),
   zorlukOverride: z.enum(['RUTIN', 'ARIZA', 'PROJE']).optional(),
@@ -44,6 +46,24 @@ function mapIsTuruToZorluk(isTuru: string): 'RUTIN' | 'ARIZA' | 'PROJE' {
   return 'PROJE';
 }
 
+type KaliteKontrolPayload = z.infer<typeof completeRequestSchema>['kaliteKontrol'];
+
+function isUniteSaatiExcluded(kaliteKontrol: KaliteKontrolPayload): boolean {
+  return Boolean(
+    kaliteKontrol.uniteSaatiExcludeFromScoring ??
+      kaliteKontrol.uniteSaatiMuaf ??
+      false
+  );
+}
+
+function isAdamSaatExcluded(kaliteKontrol: KaliteKontrolPayload): boolean {
+  return Boolean(
+    kaliteKontrol.adamSaatExcludeFromScoring ??
+      kaliteKontrol.adamSaatMuaf ??
+      false
+  );
+}
+
 function hesaplaKalitePuani(kaliteKontrol: z.infer<typeof completeRequestSchema>['kaliteKontrol']): number {
   const puanAlanlari: boolean[] = [
     kaliteKontrol.uniteModelVar,
@@ -52,11 +72,11 @@ function hesaplaKalitePuani(kaliteKontrol: z.infer<typeof completeRequestSchema>
     kaliteKontrol.fotograflarVar,
   ];
 
-  if (!kaliteKontrol.uniteSaatiMuaf) {
+  if (!isUniteSaatiExcluded(kaliteKontrol)) {
     puanAlanlari.push(kaliteKontrol.uniteSaatiVar);
   }
 
-  if (!kaliteKontrol.adamSaatMuaf) {
+  if (!isAdamSaatExcluded(kaliteKontrol)) {
     puanAlanlari.push(kaliteKontrol.adamSaatVar);
   }
 
@@ -101,6 +121,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     const zorlukSeviyesi = body.zorlukOverride ?? mapIsTuruToZorluk(service.isTuru);
     const zorlukCarpani = ZORLUK_CARPANLARI[zorlukSeviyesi] ?? 1.0;
     const raporBasarisi = hesaplaKalitePuani(body.kaliteKontrol);
+    const uniteSaatiExcluded = isUniteSaatiExcluded(body.kaliteKontrol);
+    const adamSaatExcluded = isAdamSaatExcluded(body.kaliteKontrol);
     const bonusSet = new Set(body.bonusPersonelIds ?? []);
 
     await prisma.$transaction(async (tx) => {
@@ -154,22 +176,62 @@ export async function POST(request: Request, { params }: RouteContext) {
             seriNoVar: body.kaliteKontrol.uniteSeriNoVar,
             fotografVar: body.kaliteKontrol.fotograflarVar,
             aciklamaVar: body.kaliteKontrol.aciklamaYeterli,
-            saatVar: body.kaliteKontrol.uniteSaatiMuaf ? true : body.kaliteKontrol.uniteSaatiVar,
+            saatVar: uniteSaatiExcluded ? true : body.kaliteKontrol.uniteSaatiVar,
             raporBasarisi,
             hamPuan: puan.hamPuan,
             zorlukCarpani,
             finalPuan: puan.finalPuan,
             bonus: bonusSet.has(personel.personelId),
-            notlar: JSON.stringify({ kaliteKontrol: body.kaliteKontrol }),
+            notlar: JSON.stringify({
+              kaliteKontrol: {
+                ...body.kaliteKontrol,
+                uniteSaatiExcludeFromScoring: uniteSaatiExcluded,
+                adamSaatExcludeFromScoring: adamSaatExcluded,
+              },
+            }),
           },
         });
       }
+
+      await tx.kapanisRaporu.upsert({
+        where: { servisId: service.id },
+        update: {
+          uniteBilgileri: body.kaliteKontrol.uniteModelVar && body.kaliteKontrol.uniteSeriNoVar,
+          fotograf: body.kaliteKontrol.fotograflarVar,
+          adamSaat: body.kaliteKontrol.adamSaatVar,
+          saatiOlmayanUnitePuanDisi: uniteSaatiExcluded,
+          adamSaatUygulanmazPuanDisi: adamSaatExcluded,
+          aciklama: service.servisAciklamasi || '-',
+          raporlayanPersonel: auth.payload.email || auth.payload.userId,
+          raporTarihi: new Date(),
+        },
+        create: {
+          servisId: service.id,
+          uniteBilgileri: body.kaliteKontrol.uniteModelVar && body.kaliteKontrol.uniteSeriNoVar,
+          fotograf: body.kaliteKontrol.fotograflarVar,
+          tekneKonum: false,
+          sarfMalzeme: false,
+          adamSaat: body.kaliteKontrol.adamSaatVar,
+          taseronBilgisi: false,
+          stokMalzeme: false,
+          saatiOlmayanUnitePuanDisi: uniteSaatiExcluded,
+          adamSaatUygulanmazPuanDisi: adamSaatExcluded,
+          aciklama: service.servisAciklamasi || '-',
+          raporlayanPersonel: auth.payload.email || auth.payload.userId,
+          raporTarihi: new Date(),
+        },
+      });
+
+      const completionDate = new Date();
+      completionDate.setUTCHours(12, 0, 0, 0);
 
       await tx.service.update({
         where: { id: service.id },
         data: {
           durum: 'TAMAMLANDI',
-          tamamlanmaAt: new Date(),
+          tamamlanmaAt: completionDate,
+          tarih: completionDate,
+          tahminiBitisTarihi: completionDate,
           zorlukSeviyesi,
         },
       });

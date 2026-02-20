@@ -4,55 +4,130 @@
 
 @layer base {
   :root {
-    --font-body: 'Manrope', 'Segoe UI', sans-serif;
-    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    /* Grand Maritime Typography */
+    --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font-display: 'Playfair Display', 'Georgia', serif;
 
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Grand Maritime Color Palette - Light Theme (Default) */
+    --background: 50 100% 98%; /* cream-50 base */
+    --foreground: 215 25% 10%; /* charcoal-900 equivalent */
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%;
+    --popover-foreground: 215 25% 10%;
+
+    /* Primary: Navy Blue */
+    --primary: 215 60% 17%; /* navy-700 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Cream tones */
+    --secondary: 40 20% 96%; /* cream-100 */
+    --secondary-foreground: 215 25% 10%;
+
+    /* Muted surfaces */
+    --muted: 40 15% 92%; /* cream-200 */
+    --muted-foreground: 215 10% 45%;
+
+    /* Accent: Gold */
+    --accent: 43 70% 52%; /* gold-500 */
+    --accent-foreground: 215 60% 17%;
+
+    /* Status colors - Maritime theme */
+    --destructive: 0 72% 51%; /* coral */
+    --destructive-foreground: 0 0% 100%;
+    --success: 150 50% 36%; /* seafoam */
+    --warning: 35 90% 50%; /* sunset */
+    --error: 0 72% 51%; /* coral */
+
+    --border: 215 20% 88%; /* cream-200 equivalent */
+    --input: 215 20% 88%;
+    --ring: 215 60% 17%;
+
     --radius: 0.5rem;
 
     /* Compatibility aliases for legacy classes */
     --color-bg: hsl(var(--background));
     --color-surface: hsl(var(--card));
     --color-surface-elevated: hsl(var(--secondary));
+
+    /* Grand Maritime Color Mappings */
+    --navy-900: 215 75% 8%;  /* #0A2342 */
+    --navy-700: 215 60% 17%; /* #1B3B6F */
+    --navy-500: 215 55% 38%; /* #2E5A88 */
+    --navy-300: 215 45% 58%; /* #5A82A8 */
+
+    --gold-500: 43 70% 52%;   /* #D4AF37 */
+    --gold-400: 43 75% 62%;   /* #E5C158 */
+    --gold-600: 38 65% 45%;   /* #B8942D */
+
+    --copper-500: 20 60% 46%; /* #B87333 */
+
+    --cream-50: 50 20% 98%;
+    --cream-100: 40 25% 94%;
+    --cream-200: 40 20% 88%;
+
+    --charcoal: 215 25% 10%;
+    --slate: 215 10% 45%;
+
+    /* Maritime Status Colors */
+    --seafoam: 150 50% 36%;
+    --sky-blue: 215 85% 55%;
+    --sunset: 35 90% 50%;
+    --coral: 0 72% 51%;
+
     --color-border: hsl(var(--border));
     --color-text: hsl(var(--foreground));
     --color-text-muted: hsl(var(--muted-foreground));
     --color-text-subtle: color-mix(in oklab, hsl(var(--muted-foreground)) 78%, black 22%);
     --color-primary: hsl(var(--primary));
-    --color-primary-light: color-mix(in oklab, hsl(var(--primary)) 76%, white 24%);
-    --color-primary-dark: color-mix(in oklab, hsl(var(--primary)) 78%, black 22%);
+    --color-primary-light: hsl(215 60% 35%);
+    --color-primary-dark: hsl(215 75% 12%);
 
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-error: #ef4444;
-    --color-info: #06b6d4;
-    --color-accent-gold: #fbbf24;
-    --color-accent-silver: #94a3b8;
-    --color-accent-bronze: #d97706;
+    --color-success: hsl(var(--success));
+    --color-warning: hsl(var(--warning));
+    --color-error: hsl(var(--error));
+    --color-info: hsl(215 85% 55%);
 
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
+    /* Grand Maritime Badge Colors */
+    --color-accent-gold: #D4AF37;
+    --color-accent-silver: #C0C0C0;
+    --color-accent-bronze: #B87333;
+
+    /* Grand Maritime Gradients */
+    --gradient-maritime-from: #0A2342;
+    --gradient-maritime-via: #1B3B6F;
+    --gradient-maritime-to: #2E5A88;
+
+    --btn-primary-from: #1B3B6F;
+    --btn-primary-to: #0A2342;
+    --btn-primary-shadow: rgba(10, 35, 66, 0.35);
+    --btn-primary-shadow-hover: rgba(10, 35, 66, 0.46);
+
+    --btn-success-to: #2E8B57;
+    --btn-danger-from: #EF4444;
+    --btn-danger-to: #B91C1C;
+
+    /* Grand Maritime Text Colors */
+    --color-maritime-text: #0A2342;
+    --color-maritime-subtitle: #1B3B6F;
+    --color-maritime-muted: #5A82A8;
+
+    /* Grand Maritime Sidebar */
+    --sidebar-surface: #FAF8F5;
+    --sidebar-border-color: #E8E0D5;
+    --sidebar-hover-bg: rgba(10, 35, 66, 0.06);
+    --sidebar-hover-fg: var(--color-text);
+    --sidebar-active-bg: rgba(212, 175, 55, 0.15);
+    --sidebar-active-fg: #0A2342;
+    --sidebar-active-border: #D4AF37;
+
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
     --space-2xl: 48px;
 
     --radius-sm: 6px;
@@ -68,25 +143,90 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 199 89% 48%;
+    /* Grand Maritime Dark Mode Colors */
+    --background: 215 25% 8%; /* navy-900 equivalent */
+    --foreground: 40 20% 98%; /* cream-50 equivalent in dark */
+
+    --card: 215 30% 12%; /* navy-800 */
+    --card-foreground: 40 20% 98%;
+
+    --popover: 215 30% 12%;
+    --popover-foreground: 40 20% 98%;
+
+    /* Primary still navy but lighter in dark */
+    --primary: 215 60% 45%; /* navy-500 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 25% 15%; /* darker navy */
+    --secondary-foreground: 40 20% 98%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 10% 65%;
+
+    --accent: 43 70% 52%; /* gold-500 */
+    --accent-foreground: 215 60% 17%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 20% 30%;
+    --input: 215 20% 30%;
+    --ring: 215 60% 45%;
+
+    --success: 150 50% 36%;
+    --warning: 35 90% 50%;
+    --error: 0 72% 51%;
+
+    /* Dark mode text colors */
+    --color-maritime-text: #E8E0D5;
+    --color-maritime-subtitle: #C0B29D;
+
+    /* Dark mode sidebar */
+    --sidebar-surface: #0A2342;
+    --sidebar-border-color: #1B3B6F;
+    --sidebar-hover-bg: rgba(212, 175, 55, 0.15);
+    --sidebar-hover-fg: #FAF8F5;
+    --sidebar-active-bg: rgba(212, 175, 55, 0.25);
+    --sidebar-active-fg: #FAF8F5;
+    --sidebar-active-border: #D4AF37;
+
+    /* Dark mode gradients */
+    --gradient-marine-radial-start: rgba(46, 90, 136, 0.24);
+    --gradient-marine-radial-end: rgba(10, 35, 66, 0.2);
+    --gradient-marine-from: #06182E;
+    --gradient-marine-via: #0A2342;
+    --gradient-marine-to: #1B3B6F;
+
+    /* Dark mode surface panel background */
+    --btn-primary-from: #2E5A88;
+    --btn-primary-to: #0A2342;
+    --btn-primary-shadow: rgba(10, 35, 66, 0.4);
+    --btn-primary-shadow-hover: rgba(30, 64, 175, 0.46);
+    --btn-success-to: color-mix(in oklab, hsl(var(--success)) 72%, black 28%);
+    --btn-danger-from: color-mix(in oklab, hsl(var(--destructive)) 84%, white 16%);
+    --btn-danger-to: color-mix(in oklab, hsl(var(--destructive)) 68%, black 32%);
+    --task-hint-label-color: color-mix(in oklab, hsl(var(--accent)) 70%, white 30%);
+    --task-hint-title-color: hsl(var(--foreground));
+    --task-hint-body-color: color-mix(in oklab, hsl(var(--foreground)) 76%, hsl(var(--muted-foreground)) 24%);
+    --ui-redesign-hero-radial-start: rgba(56, 189, 248, 0.3);
+    --ui-redesign-hero-radial-end: rgba(30, 64, 175, 0.24);
+    --ui-redesign-hero-from: #0d2036;
+    --ui-redesign-hero-via: #123052;
+    --ui-redesign-hero-to: #184066;
+    --ui-redesign-header-radial-start: rgba(56, 189, 248, 0.24);
+    --ui-redesign-header-radial-end: rgba(30, 64, 175, 0.2);
+    --ui-redesign-header-from: #0f233b;
+    --ui-redesign-header-via: #123153;
+    --ui-redesign-header-to: #184167;
+    --ui-focus-hero-from: #0f1f33;
+    --ui-focus-hero-to: #152a42;
+    --sidebar-surface: color-mix(in oklab, hsl(var(--card)) 92%, black 8%);
+    --sidebar-border-color: color-mix(in oklab, hsl(var(--border)) 82%, white 18%);
+    --sidebar-hover-bg: color-mix(in oklab, hsl(var(--primary)) 24%, transparent 76%);
+    --sidebar-hover-fg: hsl(var(--foreground));
+    --sidebar-active-bg: color-mix(in oklab, hsl(var(--primary)) 34%, transparent 66%);
+    --sidebar-active-fg: color-mix(in oklab, hsl(var(--primary)) 72%, white 28%);
+    --sidebar-active-border: color-mix(in oklab, hsl(var(--primary)) 75%, white 25%);
   }
 
   * {
@@ -118,12 +258,16 @@ html,
 body {
   height: 100%;
   font-family: var(--font-body);
-  background:
-    radial-gradient(1200px 600px at 8% -10%, rgba(0, 166, 201, 0.16), transparent 55%),
-    radial-gradient(1200px 600px at 92% 0%, rgba(251, 191, 36, 0.1), transparent 52%),
-    linear-gradient(180deg, #08111d 0%, var(--color-bg) 42%);
+  background: linear-gradient(180deg, #f8f9fa 0%, #f8f9fa 100%);
   color: var(--color-text);
   line-height: 1.6;
+}
+
+.dark body {
+  background:
+    radial-gradient(1200px 620px at 10% -16%, rgba(59, 130, 246, 0.22), transparent 58%),
+    radial-gradient(1200px 640px at 88% -10%, rgba(30, 64, 175, 0.2), transparent 60%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-bg) 86%, #020617 14%) 0%, var(--color-bg) 45%);
 }
 
 /* ==================== LAYOUT ==================== */
@@ -136,22 +280,15 @@ body {
   flex: 1;
   margin-left: var(--sidebar-width);
   padding: var(--space-xl);
+  min-height: 100vh;
+  background-color: #FAF8F5; /* Grand Maritime: cream-50 */
   max-width: calc(100vw - var(--sidebar-width));
   overflow-x: hidden;
   position: relative;
 }
 
 .main-content::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: radial-gradient(circle at center, black 35%, transparent 90%);
-  z-index: 0;
+  display: none;
 }
 
 .main-content > * {
@@ -166,8 +303,9 @@ body {
   top: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border-right: 1px solid var(--color-border);
+  background-color: #FAF8F5; /* Grand Maritime: cream-50 */
+  background-image: none;
+  border-right: 1px solid #E8E0D5; /* Grand Maritime: cream-200 */
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -255,14 +393,14 @@ body {
 }
 
 .sidebar-link:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-hover-fg);
 }
 
 .sidebar-link.active {
-  background: linear-gradient(90deg, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0.05) 100%);
-  color: var(--color-primary-light);
-  border-left: 3px solid var(--color-primary);
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+  border-left: 3px solid var(--sidebar-active-border);
   margin-left: -3px;
 }
 
@@ -355,6 +493,10 @@ body {
 .sidebar-footer {
   padding: var(--space-md);
   border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: stretch;
   text-align: center;
 }
 
@@ -391,10 +533,10 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid color-mix(in oklab, var(--color-border) 84%, white 16%);
   background:
-    radial-gradient(900px 320px at 0% 0%, rgba(64, 196, 222, 0.2), transparent 55%),
-    radial-gradient(800px 300px at 100% 0%, rgba(251, 191, 36, 0.12), transparent 52%),
-    linear-gradient(120deg, #0f2238 0%, #122946 55%, #17365a 100%);
-  color: #eaf7ff;
+    radial-gradient(900px 320px at 0% 0%, var(--gradient-marine-radial-start), transparent 55%),
+    radial-gradient(800px 300px at 100% 0%, var(--gradient-marine-radial-end), transparent 52%),
+    linear-gradient(120deg, var(--gradient-marine-from) 0%, var(--gradient-marine-via) 55%, var(--gradient-marine-to) 100%);
+  color: var(--color-marine-text);
   box-shadow: 0 18px 34px rgba(5, 15, 30, 0.34);
 }
 
@@ -469,7 +611,7 @@ body {
 
 .page-subtitle {
   font-size: 0.9rem;
-  color: #c6d8e8;
+  color: var(--color-marine-subtitle);
 }
 
 /* ==================== CARDS ==================== */
@@ -507,14 +649,14 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #00a6c9 0%, #0a6f95 100%);
+  background: linear-gradient(135deg, var(--btn-primary-from) 0%, var(--btn-primary-to) 100%);
   color: white;
-  box-shadow: 0 10px 24px rgba(6, 120, 155, 0.35);
+  box-shadow: 0 10px 24px var(--btn-primary-shadow);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(6, 120, 155, 0.46);
+  box-shadow: 0 14px 28px var(--btn-primary-shadow-hover);
 }
 
 .btn-secondary {
@@ -528,7 +670,7 @@ body {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--color-success) 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--btn-success-to) 100%);
   color: white;
 }
 
@@ -743,7 +885,7 @@ body {
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 1024px) {
   .sidebar {
-    width: 72px;
+    width: 88px;
   }
 
   .sidebar-header {
@@ -753,25 +895,45 @@ body {
 
   .sidebar-brand,
   .sidebar-section-title,
-  .sidebar-label,
   .sidebar-badge,
   .sidebar-user-info,
   .sidebar-footer {
     display: none;
   }
 
+  .sidebar-nav {
+    padding-inline: var(--space-xs);
+  }
+
   .sidebar-link {
+    flex-direction: column;
     justify-content: center;
-    padding: var(--space-md);
+    gap: 4px;
+    padding: 10px 6px;
+    text-align: center;
   }
 
   .sidebar-icon {
     width: auto;
   }
 
+  .sidebar-label {
+    display: block;
+    flex: 0 0 auto;
+    min-height: 1.4em;
+    font-size: 0.62rem;
+    line-height: 1.1;
+    color: var(--color-text-muted);
+  }
+
+  .sidebar-link.active .sidebar-label,
+  .sidebar-link:hover .sidebar-label {
+    color: inherit;
+  }
+
   .main-content {
-    margin-left: 72px;
-    max-width: calc(100vw - 72px);
+    margin-left: 88px;
+    max-width: calc(100vw - 88px);
   }
 
   .sidebar-user-trigger {
@@ -849,20 +1011,18 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid color-mix(in oklab, var(--color-border) 84%, white 16%);
   background:
-    radial-gradient(900px 320px at 0% 0%, rgba(64, 196, 222, 0.2), transparent 55%),
-    radial-gradient(800px 300px at 100% 0%, rgba(251, 191, 36, 0.12), transparent 52%),
-    linear-gradient(120deg, #0f2238 0%, #122946 55%, #17365a 100%);
-  color: #eaf7ff;
+    radial-gradient(900px 320px at 0% 0%, var(--gradient-marine-radial-start), transparent 55%),
+    radial-gradient(800px 300px at 100% 0%, var(--gradient-marine-radial-end), transparent 52%),
+    linear-gradient(120deg, var(--gradient-marine-from) 0%, var(--gradient-marine-via) 55%, var(--gradient-marine-to) 100%);
+  color: var(--color-marine-text);
   padding: var(--space-lg);
   box-shadow: 0 18px 34px rgba(5, 15, 30, 0.34);
 }
 
 .surface-panel {
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in oklab, var(--color-border) 82%, white 18%);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0) 100%),
-    var(--color-surface);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: 0 14px 28px rgba(5, 14, 28, 0.24);
 }
 
@@ -916,4 +1076,328 @@ body {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: white;
   border-color: transparent;
+}
+
+/* ==================== APP SHELL PUBLIC ROUTES ==================== */
+.main-content--public {
+  margin-left: 0;
+  max-width: 100vw;
+  padding: 0;
+}
+
+.main-content--public::before {
+  display: none;
+}
+
+/* ==================== BASE PRIMITIVES ==================== */
+.sp-btn {
+  transition: all 0.16s ease;
+}
+
+.sp-btn-default {
+  background: linear-gradient(135deg, var(--btn-primary-from) 0%, var(--btn-primary-to) 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px var(--btn-primary-shadow);
+}
+
+.sp-btn-default:hover {
+  filter: brightness(1.06);
+}
+
+.sp-btn-secondary {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.sp-btn-secondary:hover {
+  background: color-mix(in oklab, var(--color-surface-elevated) 85%, white 15%);
+}
+
+.sp-btn-outline {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.sp-btn-outline:hover {
+  background: color-mix(in oklab, var(--color-surface-elevated) 80%, transparent 20%);
+}
+
+.sp-btn-ghost {
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+.sp-btn-ghost:hover {
+  background: color-mix(in oklab, var(--color-surface-elevated) 70%, transparent 30%);
+  color: var(--color-text);
+}
+
+.sp-btn-destructive {
+  background: linear-gradient(135deg, var(--btn-danger-from) 0%, var(--btn-danger-to) 100%);
+  color: #fff;
+}
+
+.sp-btn-link {
+  color: var(--color-primary-light);
+}
+
+.sp-card {
+  border-color: color-mix(in oklab, var(--color-border) 80%, white 20%);
+}
+
+.sp-input,
+.sp-select-trigger {
+  border-color: color-mix(in oklab, var(--color-border) 82%, white 18%);
+  background: color-mix(in oklab, var(--color-surface) 86%, transparent 14%);
+}
+
+.sp-select-content {
+  border-color: color-mix(in oklab, var(--color-border) 82%, white 18%);
+  background: color-mix(in oklab, var(--color-surface-elevated) 86%, #050c16 14%);
+}
+
+.sp-select-item[data-highlighted] {
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent 78%);
+}
+
+.sp-tabs-list {
+  border: 1px solid color-mix(in oklab, var(--color-border) 82%, white 18%);
+}
+
+.sp-tabs-trigger[data-state='active'] {
+  color: var(--color-text);
+  background: color-mix(in oklab, var(--color-surface) 88%, white 12%);
+}
+
+.sp-table-head {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sp-table-cell {
+  vertical-align: middle;
+}
+
+/* ==================== INLINE TASK HINT ==================== */
+.task-hint {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--color-border) 76%, white 24%);
+  background:
+    linear-gradient(90deg, rgba(14, 165, 233, 0.13) 0%, rgba(14, 165, 233, 0.05) 35%, rgba(15, 23, 42, 0.15) 100%),
+    var(--color-surface);
+}
+
+.task-hint__content {
+  min-width: 0;
+}
+
+.task-hint__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--task-hint-label-color);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.task-hint__title {
+  margin-top: 0.15rem;
+  color: var(--task-hint-title-color);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.task-hint__description {
+  margin-top: 0.3rem;
+  color: var(--task-hint-body-color);
+  font-size: 0.87rem;
+}
+
+.task-hint__steps {
+  margin-top: 0.55rem;
+  margin-left: 1rem;
+  color: var(--task-hint-body-color);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.task-hint__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .task-hint {
+    flex-direction: column;
+  }
+
+  .task-hint__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* ==================== REDESIGN MODE ==================== */
+body.ui-redesign {
+  --space-sm: 10px;
+  --space-md: 18px;
+  --space-lg: 26px;
+  --space-xl: 34px;
+  --space-2xl: 48px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --sidebar-width: 300px;
+  --color-surface: #0f1c2d;
+  --color-surface-elevated: #15263a;
+  --color-border: rgba(148, 163, 184, 0.34);
+}
+
+body.ui-redesign .main-content {
+  padding: clamp(16px, 2vw, 28px);
+}
+
+body.ui-redesign .page-title {
+  font-size: clamp(1.5rem, 1.8vw, 1.95rem);
+}
+
+body.ui-redesign .page-subtitle {
+  font-size: 0.92rem;
+  color: #d2deea;
+}
+
+body.ui-redesign .hero-panel {
+  padding: clamp(16px, 1.7vw, 22px);
+  border-color: color-mix(in oklab, var(--color-border) 75%, white 25%);
+  background:
+    radial-gradient(560px 220px at -4% -10%, var(--ui-redesign-hero-radial-start), transparent 60%),
+    radial-gradient(540px 220px at 104% -5%, var(--ui-redesign-hero-radial-end), transparent 58%),
+    linear-gradient(120deg, var(--ui-redesign-hero-from) 0%, var(--ui-redesign-hero-via) 60%, var(--ui-redesign-hero-to) 100%);
+}
+
+body.ui-redesign .surface-panel,
+body.ui-redesign .sp-card {
+  border-color: color-mix(in oklab, var(--color-border) 76%, white 24%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(255, 255, 255, 0) 100%),
+    var(--color-surface);
+}
+
+body.ui-redesign .page-header {
+  border-color: color-mix(in oklab, var(--color-border) 72%, white 28%);
+  background:
+    radial-gradient(640px 280px at -2% -10%, var(--ui-redesign-header-radial-start), transparent 62%),
+    radial-gradient(620px 260px at 104% -8%, var(--ui-redesign-header-radial-end), transparent 60%),
+    linear-gradient(120deg, var(--ui-redesign-header-from) 0%, var(--ui-redesign-header-via) 58%, var(--ui-redesign-header-to) 100%);
+}
+
+body.ui-redesign .sidebar {
+  border-right-color: color-mix(in oklab, var(--color-border) 74%, white 26%);
+  background: var(--sidebar-surface);
+}
+
+body.ui-redesign .sidebar-link {
+  border: 1px solid transparent;
+  margin-bottom: 6px;
+}
+
+body.ui-redesign .sidebar-link.active {
+  margin-left: 0;
+  border-left: 1px solid var(--sidebar-active-border);
+  border-color: color-mix(in oklab, var(--sidebar-active-border) 35%, transparent 65%);
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+}
+
+button,
+[role='button'],
+[role='combobox'] {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+body.ui-redesign .table th,
+body.ui-redesign .sp-table-head {
+  padding: 12px 14px;
+}
+
+body.ui-redesign .table td,
+body.ui-redesign .sp-table-cell {
+  padding: 12px 14px;
+}
+
+body.ui-redesign.ui-density-compact .table td,
+body.ui-redesign.ui-density-compact .sp-table-cell {
+  padding: 9px 12px;
+}
+
+body.ui-redesign.ui-density-compact .table th,
+body.ui-redesign.ui-density-compact .sp-table-head {
+  padding: 10px 12px;
+}
+
+body.ui-no-motion *,
+body.ui-no-motion *::before,
+body.ui-no-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+body.ui-high-contrast {
+  filter: contrast(1.12);
+}
+
+body.ui-high-contrast .surface-panel,
+body.ui-high-contrast .sp-card,
+body.ui-high-contrast .hero-panel {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+body.ui-large-hit-targets button,
+body.ui-large-hit-targets [role='button'],
+body.ui-large-hit-targets input,
+body.ui-large-hit-targets select,
+body.ui-large-hit-targets textarea,
+body.ui-large-hit-targets .sidebar-link {
+  min-height: 42px;
+}
+
+body.ui-focus-mode .hero-panel {
+  background: linear-gradient(120deg, var(--ui-focus-hero-from) 0%, var(--ui-focus-hero-to) 100%) !important;
+}
+
+body.ui-focus-mode .surface-panel,
+body.ui-focus-mode .sp-card {
+  background: #111f32 !important;
+}
+
+body.ui-readable-typography {
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+
+body.ui-readable-typography .page-subtitle,
+body.ui-readable-typography .text-muted-foreground {
+  line-height: 1.6;
+}
+
+body.ui-sidebar-pinned-operations .quick-actions-panel {
+  position: sticky;
+  top: 90px;
 }

@@ -1,11 +1,26 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+/**
+ * Grand Maritime Card Component
+ *
+ * Classic maritime design with subtle gold border accent
+ * for premium feel and brand consistency.
+ */
+
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ className, ...props }, ref) => (
         <div
             ref={ref}
-            className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
+            className={cn(
+                // Grand Maritime Card Styling
+                "rounded-lg border bg-card text-card-foreground shadow-sm",
+                // Subtle gold border accent for premium feel
+                "border-l-4 border-l-gold-500 border-t border-r border-b border-cream-200",
+                // Smooth transitions
+                "transition-all duration-200 hover:shadow-md",
+                className
+            )}
             {...props}
         />
     )
@@ -27,7 +42,11 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
     ({ className, ...props }, ref) => (
         <h3
             ref={ref}
-            className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+            className={cn(
+                // Grand Maritime Title Styling
+                "font-display text-xl font-semibold leading-none tracking-tight text-navy-900",
+                className
+            )}
             {...props}
         />
     )
@@ -38,7 +57,7 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
     ({ className, ...props }, ref) => (
         <p
             ref={ref}
-            className={cn("text-sm text-muted-foreground", className)}
+            className={cn("text-sm text-slate-500", className)}
             {...props}
         />
     )

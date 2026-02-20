@@ -76,8 +76,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // If not in localStorage, try to get from cookie
         if (!token) {
-          const match = document.cookie.match(/(^|;) ?token=([^;]*)(;|$)/);
-          token = match ? match[2] : null;
+          const match = document.cookie.match(/(?:^|;\s*)token=([^;]+)/);
+          token = match ? match[1] : null;
           if (token) {
             // Store in localStorage for consistency
             localStorage.setItem('token', token);
@@ -144,7 +144,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(data.user));
 
       // Also set token as cookie for middleware
-      document.cookie = `token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${secure}`;
     }
   }
 

@@ -1,34 +1,62 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { fetchPersonnelById, fetchServices } from '@/lib/api';
 import { Personnel, Service, UNVAN_CONFIG } from '@/types';
+
+type EditablePersonel = {
+  ad: string;
+  rol: 'teknisyen' | 'yetkili';
+  unvan: 'usta' | 'cirak' | 'yonetici' | 'ofis';
+  aktif: boolean;
+  girisYili: string;
+};
+
+function toEditState(personel: Personnel): EditablePersonel {
+  return {
+    ad: personel.ad ?? '',
+    rol: personel.rol ?? 'teknisyen',
+    unvan: personel.unvan ?? 'cirak',
+    aktif: Boolean(personel.aktif),
+    girisYili: personel.girisYili ? String(personel.girisYili) : '',
+  };
+}
 
 export default function PersonelDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+  const duzenleModu = searchParams.get('duzenle') === '1';
 
   const [personel, setPersonel] = useState<Personnel | null>(null);
   const [assignedServices, setAssignedServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingUnvan, setEditingUnvan] = useState(false);
-  const [selectedUnvan, setSelectedUnvan] = useState<'usta' | 'cirak' | 'yonetici' | 'ofis'>('cirak');
-  const [savingUnvan, setSavingUnvan] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formState, setFormState] = useState<EditablePersonel>({
+    ad: '',
+    rol: 'teknisyen',
+    unvan: 'cirak',
+    aktif: true,
+    girisYili: '',
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
         const [personnelData, servicesData] = await Promise.all([fetchPersonnelById(id), fetchServices()]);
         setPersonel(personnelData);
-        if (personnelData?.unvan) {
-          setSelectedUnvan(personnelData.unvan as 'usta' | 'cirak' | 'yonetici' | 'ofis');
-        }
 
         if (personnelData) {
-          const assigned = servicesData.filter((s) => s.atananPersonel?.some((p) => p.personnelId === id));
+          setFormState(toEditState(personnelData));
+          const assigned = servicesData.filter((service) =>
+            service.atananPersonel?.some((assignment) => assignment.personnelId === id)
+          );
           setAssignedServices(assigned);
         }
       } catch (error) {
@@ -37,38 +65,75 @@ export default function PersonelDetailPage() {
         setLoading(false);
       }
     }
+
     loadData();
   }, [id]);
 
-  const handleUnvanSave = async () => {
+  useEffect(() => {
+    if (duzenleModu) {
+      setEditing(true);
+    }
+  }, [duzenleModu]);
+
+  const handleSave = async () => {
     if (!personel) return;
-    setSavingUnvan(true);
+    const temizAd = formState.ad.trim();
+    if (temizAd.length < 2) {
+      setFormError('Ad en az 2 karakter olmalidir');
+      setFormSuccess(null);
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+    setFormSuccess(null);
+
     try {
-      const res = await fetch(`/api/personel/${personel.id}`, {
+      const response = await fetch(`/api/personel/${personel.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ unvan: selectedUnvan }),
+        body: JSON.stringify({
+          ad: temizAd,
+          rol: formState.rol,
+          unvan: formState.unvan,
+          aktif: formState.aktif,
+          girisYili: formState.girisYili ? Number(formState.girisYili) : null,
+        }),
       });
 
-      if (!res.ok) throw new Error('Unvan gÃ¼ncellenemedi');
-      const updated = await res.json();
-      setPersonel((prev) => (prev ? { ...prev, unvan: updated.unvan } : prev));
-      setEditingUnvan(false);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const details = payload?.details?.fieldErrors
+          ? Object.entries(payload.details.fieldErrors)
+              .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+              .join(' | ')
+          : null;
+        throw new Error(payload?.error || details || 'Personel guncellenemedi');
+      }
+
+      const updatedPersonel: Personnel = {
+        ...(personel as Personnel),
+        ...payload,
+      };
+
+      setPersonel(updatedPersonel);
+      setFormState(toEditState(updatedPersonel));
+      setEditing(false);
+      setFormSuccess('Personel bilgileri guncellendi.');
     } catch (error) {
-      console.error('Unvan gÃ¼ncelleme hatasÄ±:', error);
-      alert('Unvan gÃ¼ncellenemedi');
+      setFormError(error instanceof Error ? error.message : 'Personel guncellenemedi');
     } finally {
-      setSavingUnvan(false);
+      setSaving(false);
     }
   };
 
   if (loading) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <p>YÃ¼kleniyor...</p>
+        <p>Yukleniyor...</p>
       </div>
     );
   }
@@ -76,16 +141,16 @@ export default function PersonelDetailPage() {
   if (!personel) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <h2>Personel bulunamadÄ±</h2>
+        <h2>Personel bulunamadi</h2>
         <p style={{ color: 'var(--color-text-muted)' }}>ID: {id}</p>
         <Link href="/personel" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
-          â† Personel listesine dÃ¶n
+          ← Personel listesine don
         </Link>
       </div>
     );
   }
 
-  const avgPuan = 0;
+  const avgPuan = personel.aylikOrtalamaPuan ?? 0;
   const unvanConfig = UNVAN_CONFIG[personel.unvan] || { icon: '', label: personel.unvan };
 
   return (
@@ -94,10 +159,10 @@ export default function PersonelDetailPage() {
         <div className="hero-content" style={{ width: '100%', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
             <button onClick={() => router.back()} className="btn btn-secondary" style={{ padding: 'var(--space-sm)' }}>
-              â†
+              ←
             </button>
             <div>
-              <h1 className="hero-title">{personel.ad}</h1>
+              <h1 className="hero-title" data-testid="personel-baslik">{personel.ad}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', marginTop: 'var(--space-xs)' }}>
                 <span
                   style={{
@@ -111,50 +176,163 @@ export default function PersonelDetailPage() {
                 >
                   {unvanConfig.icon} {unvanConfig.label}
                 </span>
-                {personel.girisYili && (
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                    {new Date().getFullYear() - personel.girisYili} yÄ±ldÄ±r Ã§alÄ±ÅŸÄ±yor
-                  </span>
-                )}
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    background: personel.aktif ? 'var(--color-success)' : 'var(--color-error)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {personel.aktif ? 'Aktif' : 'Pasif'}
+                </span>
               </div>
             </div>
           </div>
 
           <div style={{ marginTop: 'var(--space-sm)', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            {editingUnvan ? (
+            {editing ? (
               <>
-                <select
-                  className="form-select"
-                  value={selectedUnvan}
-                  onChange={(e) => setSelectedUnvan(e.target.value as 'usta' | 'cirak' | 'yonetici' | 'ofis')}
-                  style={{ minWidth: 180 }}
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSave}
+                  disabled={saving}
+                  data-testid="personel-kaydet-button"
                 >
-                  <option value="usta">UstabaÅŸÄ±</option>
-                  <option value="cirak">Ã‡Ä±rak</option>
-                  <option value="yonetici">YÃ¶netici</option>
-                  <option value="ofis">Ofis</option>
-                </select>
-                <button className="btn btn-primary" onClick={handleUnvanSave} disabled={savingUnvan}>
-                  {savingUnvan ? 'Kaydediliyor...' : 'Kaydet'}
+                  {saving ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
-                <button className="btn btn-secondary" onClick={() => setEditingUnvan(false)} disabled={savingUnvan}>
-                  VazgeÃ§
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setEditing(false);
+                    setFormState(toEditState(personel));
+                    setFormError(null);
+                  }}
+                  disabled={saving}
+                >
+                  Vazgec
                 </button>
               </>
             ) : (
-              <button className="btn btn-secondary" onClick={() => setEditingUnvan(true)}>
-                ÃœnvanÄ± DÃ¼zenle
+              <button
+                className="btn btn-secondary"
+                onClick={() => setEditing(true)}
+                data-testid="personel-duzenle-button"
+              >
+                Bilgileri Duzenle
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: 'var(--space-xl)' }}>
+      {formError ? (
+        <div
+          className="surface-panel"
+          style={{ marginBottom: 'var(--space-md)', color: 'var(--color-error)' }}
+          data-testid="personel-form-error"
+        >
+          {formError}
+        </div>
+      ) : null}
+      {formSuccess ? (
+        <div
+          className="surface-panel"
+          style={{ marginBottom: 'var(--space-md)', color: 'var(--color-success)' }}
+          data-testid="personel-form-success"
+        >
+          {formSuccess}
+        </div>
+      ) : null}
+
+      <div className="grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', gap: 'var(--space-xl)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
           <div className="surface-panel">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>Performans</h3>
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
+              Personel Bilgileri
+            </h3>
 
+            <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Ad</label>
+                <input
+                  className="form-input"
+                  value={formState.ad}
+                  disabled={!editing}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, ad: e.target.value }))}
+                  data-testid="personel-ad-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Rol</label>
+                <select
+                  className="form-select"
+                  value={formState.rol}
+                  disabled={!editing}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      rol: e.target.value as EditablePersonel['rol'],
+                    }))
+                  }
+                >
+                  <option value="teknisyen">Teknisyen</option>
+                  <option value="yetkili">Yetkili</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Unvan</label>
+                <select
+                  className="form-select"
+                  value={formState.unvan}
+                  disabled={!editing}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      unvan: e.target.value as EditablePersonel['unvan'],
+                    }))
+                  }
+                >
+                  <option value="usta">Usta</option>
+                  <option value="cirak">Cirak</option>
+                  <option value="yonetici">Yonetici</option>
+                  <option value="ofis">Ofis</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Giris Yili</label>
+                <input
+                  type="number"
+                  min={1950}
+                  max={new Date().getFullYear() + 1}
+                  className="form-input"
+                  value={formState.girisYili}
+                  disabled={!editing}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, girisYili: e.target.value }))}
+                />
+              </div>
+
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={formState.aktif}
+                  disabled={!editing}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, aktif: e.target.checked }))}
+                />
+                Aktif Personel
+              </label>
+            </div>
+          </div>
+
+          <div className="surface-panel">
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
+              Performans
+            </h3>
             <div
               style={{
                 textAlign: 'center',
@@ -162,116 +340,90 @@ export default function PersonelDetailPage() {
                 background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
                 borderRadius: 'var(--radius-lg)',
                 color: 'white',
-                marginBottom: 'var(--space-lg)',
               }}
             >
               <div style={{ fontSize: '3rem', fontWeight: 700 }}>{avgPuan || '-'}</div>
-              <div style={{ opacity: 0.8 }}>Ortalama Puan</div>
+              <div style={{ opacity: 0.8 }}>Aylik Ortalama Puan</div>
             </div>
+          </div>
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
-              <div
-                style={{
-                  padding: 'var(--space-md)',
-                  background: 'var(--color-surface-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-success)' }}>
-                  {assignedServices.filter((s) => s.durum === 'TAMAMLANDI').length}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Tamamlanan</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+          <div className="surface-panel">
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
+              Rozetler
+            </h3>
+            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem' }}>ALTIN</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.altinRozet || 0}</div>
               </div>
-              <div
-                style={{
-                  padding: 'var(--space-md)',
-                  background: 'var(--color-surface-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-warning)' }}>
-                  {assignedServices.filter((s) => s.durum !== 'TAMAMLANDI').length}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Devam Eden</div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem' }}>GUMUS</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.gumusRozet || 0}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem' }}>BRONZ</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.bronzRozet || 0}</div>
               </div>
             </div>
           </div>
 
           <div className="surface-panel">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>Rozetler</h3>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>ğŸ¥‡</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-gold)' }}>{personel.altinRozet || 0}</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>ğŸ¥ˆ</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-silver)' }}>{personel.gumusRozet || 0}</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>ğŸ¥‰</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-accent-bronze)' }}>{personel.bronzRozet || 0}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
+              Atanan Servisler ({assignedServices.length})
+            </h3>
 
-        <div className="surface-panel">
-          <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>Atanan Servisler ({assignedServices.length})</h3>
-
-          {assignedServices.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-muted)' }}>
-              HenÃ¼z atanan servis yok
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-              {assignedServices.slice(0, 10).map((service) => {
-                const assignment = service.atananPersonel?.find((p) => p.personnelId === id);
-                return (
-                  <Link
-                    key={service.id}
-                    href={`/servisler/${service.id}/duzenle`}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: 'var(--space-md)',
-                      background: 'var(--color-surface-elevated)',
-                      borderRadius: 'var(--radius-md)',
-                      textDecoration: 'none',
-                      color: 'var(--color-text)',
-                      borderLeft: `3px solid ${assignment?.rol === 'sorumlu' ? 'var(--color-primary)' : 'var(--color-success)'}`,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{service.tekneAdi}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                        {service.tarih} â€¢ {service.adres}
-                      </div>
-                    </div>
-                    <span
+            {assignedServices.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-muted)' }}>
+                Henuz atanan servis yok.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                {assignedServices.slice(0, 12).map((service) => {
+                  const assignment = service.atananPersonel?.find((item) => item.personnelId === id);
+                  return (
+                    <Link
+                      key={service.id}
+                      href={`/servisler/${service.id}/duzenle`}
                       style={{
-                        padding: '2px 8px',
-                        background: assignment?.rol === 'sorumlu' ? 'var(--color-primary)' : 'var(--color-success)',
-                        color: 'white',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: 'var(--space-md)',
+                        background: 'var(--color-surface-elevated)',
+                        borderRadius: 'var(--radius-md)',
+                        textDecoration: 'none',
+                        color: 'var(--color-text)',
+                        borderLeft: `3px solid ${assignment?.rol === 'sorumlu' ? 'var(--color-primary)' : 'var(--color-success)'}`,
                       }}
                     >
-                      {assignment?.rol === 'sorumlu' ? 'Sorumlu' : 'Destek'}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{service.tekneAdi}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                          {service.tarih} - {service.adres}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          background: assignment?.rol === 'sorumlu' ? 'var(--color-primary)' : 'var(--color-success)',
+                          color: 'white',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {assignment?.rol === 'sorumlu' ? 'Sorumlu' : 'Destek'}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-

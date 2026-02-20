@@ -1,0 +1,355 @@
+
+### app/api/puanlama/aylik/route.ts:143
+   140: 
+   141:     const baseRows = personeller.map((p) => {
+   142:       const servisData = servisMap.get(p.id) ? { servisSayisi: 0, bireyselPuan: 0 }
+>> 143:       const yetkiliPuan = yetkiliMap.get(p.id) ?? null;
+   144:       const ismailPuani = ismailMap.get(p.id) ?? null;
+   145:       const agirlikliToplamPuan = computeTotal({
+   146:         bireysel: servisData.bireyselPuan,
+
+### app/api/raporlar/aylik-performans/route.ts:37
+    34:                             { yer: { contains: 'netsel', mode: 'insensitive' as const } },
+    35:                             { adres: { contains: 'netsel', mode: 'insensitive' as const } },
+    36:                         ],
+>>  37:                     },
+    38:                 }
+    39:                 : {
+    40:                     OR: [
+
+### app/api/services/route.ts:173
+   170:     const primaryOrderBy = orderByMap[sort] ? { tarih: 'desc' as const }
+   171: 
+   172:     // Get total count
+>> 173:     const total = await prisma.service.count({ where });
+   174: 
+   175:     // Get services with relations
+   176:     const services = await prisma.service.findMany({
+MISSING app/api/services/[id]/complete/route.ts
+MISSING app/api/services/[id]/route.ts
+MISSING app/api/servis/[id]/zorluk-seviyesi/route.ts
+
+### app/api/sync/route.ts:117
+   114:     const sheetParam =
+   115:       typeof body?.sheet === 'string'
+   116:          body.sheet
+>> 117:         : typeof body?.sheetKey === 'string'
+   118:            body.sheetKey
+   119:           : null;
+   120:     const sheetKey = sheetParam && isValidSheetKey(sheetParam) ? sheetParam : null;
+
+### app/api/sync/status/route.ts:44
+    41:   const latestRunAt = latestLog?.createdAt ?? null;
+    42:   const minutesSinceLastRun = latestRunAt !== null
+    43:      Math.floor((now.getTime() - new Date(latestRunAt).getTime()) / (1000 * 60))
+>>  44:     : null;
+    45: 
+    46:   const staleThresholdMinutes = settings.sync.staleThresholdMinutes;
+    47: 
+
+### app/ayarlar/konumlar/page.tsx:144
+   141:         <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+   142:           <CardContent className="pt-6 text-center text-slate-400">Henüz konum kaydý bulunamadý.</CardContent>
+   143:         </Card>
+>> 144:       ) : (
+   145:         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+   146:           {lokasyonlar
+   147:             .slice()
+
+### app/ayarlar/kullanicilar/page.tsx:147
+   144:             </form>
+   145:           </CardContent>
+   146:         </Card>
+>> 147:       ) : null}
+   148: 
+   149:       <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+   150:         <CardContent className="pt-6">
+
+### app/ayarlar/page.tsx:222
+   219:       fetchWithHealth<StatsResponse>('/api/stats'),
+   220:       fetchWithHealth<{ status?: string; db?: string }>('/api/health'),
+   221:       isAdmin || nextSettings.access.yetkiliCanViewSyncLogs
+>> 222:          fetchWithHealth<SyncStatus>('/api/sync/status')
+   223:         : Promise.resolve<HealthResult<SyncStatus>>({
+   224:             data: null,
+   225:             ok: true,
+
+### app/deger/page.tsx:88
+    85:         if (!ignore) setIsAdmin(admin);
+    86: 
+    87:         const [personelRes, savedRes] = await Promise.all([
+>>  88:           fetch('/api/personel'aktif=true', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+    89:           fetch(`/api/puanlama/yetkili'ay=${encodeURIComponent(ay)}`, {
+    90:             headers: token ? { Authorization: `Bearer ${token}` } : {},
+    91:           }),
+
+### app/ismail/page.tsx:62
+    59:         if (!ignore) setIsAdmin(parsedUser?.rol === 'admin');
+    60: 
+    61:         const [personelRes, ismailRes] = await Promise.all([
+>>  62:           fetch('/api/personel'aktif=true', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+    63:           fetch(`/api/puanlama/ismail'ay=${encodeURIComponent(ay)}`, {
+    64:             headers: token ? { Authorization: `Bearer ${token}` } : {},
+    65:           }),
+
+### app/login/page.tsx:28
+    25:   localStorage.removeItem('token');
+    26: 
+    27:   const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
+>>  28:   const secure = window.location.protocol === 'https:' ?? '; Secure' : '';
+    29:   const host = window.location.hostname;
+    30:   const domains = Array.from(new Set([host, `.${host}`].filter(Boolean)));
+    31: 
+
+### app/page.tsx:200
+   197:                       </div>
+   198:                     );
+   199:                   })
+>> 200:                 ) : (
+   201:                   <p className="text-sm text-slate-400">Veri bulunamadi.</p>
+   202:                 )}
+   203:               </div>
+MISSING app/personel/[id]/page.tsx
+MISSING app/puanlama/rapor/[id]/page.tsx
+
+### app/raporlar/performans/page.tsx:245
+   242:                                         Bu dönem için performans verisi bulunamadý
+   243:                                     </TableCell>
+   244:                                 </TableRow>
+>> 245:                             ) : (
+   246:                                 performanslar.map((p) => (
+   247:                                     <TableRow key={p.personelId}>
+   248:                                         <TableCell>
+
+### app/raporlar/rozetler/page.tsx:125
+   122:                                 Henüz rozet kazanan bulunmuyor
+   123:                             </CardContent>
+   124:                         </Card>
+>> 125:                     ) : (
+   126:                         <div className="space-y-6">
+   127:                             {Object.entries(aylikData)
+   128:                                 .sort(([a], [b]) => b.localeCompare(a))
+
+### app/raporlar/whatsapp/page.tsx:45
+    42: 
+    43:     const raporMetni = activeTab === 'yarin'
+    44:          generateYarinRaporu(yarinServisler, devamEdenler)
+>>  45:         : generateHaftaRaporu(mockServices, devamEdenler);
+    46: 
+    47:     const handleCopy = async () => {
+    48:         await navigator.clipboard.writeText(raporMetni);
+
+### app/servisler/page.tsx:169
+   166:   searchParams?: SearchParams;
+   167: }) {
+   168:   const params = searchParams ? {}
+>> 169:   const search = (params.search ?? params.arama ?? '').toString().trim();
+   170: 
+   171:   const statusRawValues = splitCommaValues(toArray(params.durum));
+   172:   const dateRawValues = splitCommaValues([...toArray(params.date), ...toArray(params.tarih)]);
+
+### components/dashboard/operations-list.tsx:79
+    76:               <Skeleton key={i} className="h-16 w-full bg-slate-800" />
+    77:             ))}
+    78:           </div>
+>>  79:         ) : operations.length === 0 ? (
+    80:           <div className="text-center py-8 text-slate-400">
+    81:             <div className="text-4xl mb-2">ðŸŒŠ</div>
+    82:             <p>BugÃ¼n planlÄ± operasyon yok</p>
+
+### components/dashboard/stats-cards.tsx:64
+    61:       description: gecikenServisler > 0 ? 'Takip gerektiren gecikmeler var' : 'Geciken is yok',
+    62:       className:
+    63:         gecikenServisler > 0
+>>  64:            'border-red-500/40 bg-red-500/10 text-red-200'
+    65:           : 'border-slate-700 bg-slate-800/60 text-slate-200',
+    66:       icon: AlertTriangle,
+    67:     },
+
+### components/dashboard/technician-status.tsx:107
+   104:               <Skeleton key={i} className="h-12 w-full bg-slate-800" />
+   105:             ))}
+   106:           </div>
+>> 107:         ) : technicians.length === 0 ? (
+   108:           <div className="text-center py-8 text-slate-400">
+   109:             <div className="text-4xl mb-2">ðŸ‘¤</div>
+   110:             <p>Personel bulunamadÄ±</p>
+
+### components/dashboard/weather-widget.tsx:228
+   225:                 variant="outline"
+   226:                 className={
+   227:                   isActive
+>> 228:                      'border-sky-500/50 bg-sky-500/15 text-sky-100'
+   229:                     : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-800'
+   230:                 }
+   231:                 onClick={() => {
+
+### components/forms/service-form.tsx:255
+   252:   React.useEffect(() => {
+   253:     const loadPersonnel = async () => {
+   254:       try {
+>> 255:         const response = await authorizedFetch('/api/personel'aktif=true');
+   256:         if (!response.ok) throw new Error();
+   257: 
+   258:         const payload = (await response.json()) as Array<{
+
+### components/Header.tsx:151
+   148:                   <span className="text-xs text-muted-foreground">Az önce</span>
+   149:                 </DropdownMenuItem>
+   150:               ))
+>> 151:             ) : (
+   152:               <DropdownMenuItem disabled>Bildirim yok</DropdownMenuItem>
+   153:             )}
+   154:             <DropdownMenuSeparator />
+
+### components/operations/operations-center.tsx:93
+    90: 
+    91:     try {
+    92:       const [servicesResponse, personnelResponse] = await Promise.all([
+>>  93:         fetch('/api/services'limit=3000', { cache: 'no-store' }),
+    94:         fetch('/api/personel'aktif=true', { cache: 'no-store' }),
+    95:       ]);
+    96: 
+
+### components/operations/plan-list-view.tsx:48
+    45:         <div className="rounded-lg border border-dashed border-slate-700 p-8 text-center text-sm text-slate-300">
+    46:           Filtrelere uygun planlama kaydý bulunamadý.
+    47:         </div>
+>>  48:       ) : (
+    49:         grouped.map((group) => (
+    50:           <section key={group.key} className="space-y-2">
+    51:             <header className="flex items-center justify-between">
+
+### components/RecentServices.tsx:109
+   106:                           fontSize: '0.85rem',
+   107:                           color:
+   108:                             personel.rol === 'sorumlu'
+>> 109:                                'var(--color-text)'
+   110:                               : 'var(--color-text-muted)',
+   111:                           display: 'inline-flex',
+   112:                           alignItems: 'center',
+
+### components/services/columns.tsx:211
+   208:           className={cn(
+   209:             'font-medium',
+   210:             personelCount === 0
+>> 211:                'border-amber-500/40 bg-amber-500/10 text-amber-300'
+   212:               : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+   213:           )}
+   214:         >
+
+### components/services/data-table.tsx:508
+   505:       setRows((prev) =>
+   506:         prev.map((item) =>
+   507:           item.id === servisId
+>> 508:              {
+   509:                 ...item,
+   510:                 durum: 'TAMAMLANDI',
+   511:                 tarih: completedDate,
+
+### components/ServisKapanisModal.tsx:124
+   121:     const seeded = uniqueById(servis.personeller);
+   122:     setTumPersonel(seeded);
+   123: 
+>> 124:     fetch('/api/personel'aktif=true')
+   125:       .then((res) => (res.ok ? res.json() : []))
+   126:       .then((data: PersonelApi[]) => {
+   127:         const mapped = data.map((p) => ({
+
+### components/Sidebar.tsx:290
+   287:             </DropdownMenuContent>
+   288:           </DropdownMenu>
+   289:         </div>
+>> 290:       ) : null}
+   291: 
+   292:       <div className="sidebar-footer">
+   293:         <span className="sidebar-version">v6.0</span>
+
+### components/table/data-table-row-actions.tsx:126
+   123:       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+   124:         <AlertDialogContent onClick={(event) => event.stopPropagation()}>
+   125:           <AlertDialogHeader>
+>> 126:             <AlertDialogTitle>Servis kaydÄ± silinsin mi'</AlertDialogTitle>
+   127:             <AlertDialogDescription>
+   128:               <span className="font-medium text-foreground">{service.tekneAdi}</span> kaydÄ± soft delete ile
+   129:               kaldÄ±rÄ±lacak. Bu iÅŸlem geri alÄ±nabilir ama listeden anÄ±nda dÃ¼ÅŸer.
+
+### components/table/date-preset-filter.tsx:32
+    29:           className={cn(
+    30:             'h-9',
+    31:             value === item.value
+>>  32:                'bg-sky-600 text-white hover:bg-sky-700'
+    33:               : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+    34:           )}
+    35:         >
+
+### lib/auth/auth-context.tsx:34
+    31:   if (typeof window === 'undefined') return;
+    32: 
+    33:   const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
+>>  34:   const secure = window.location.protocol === 'https:' ?? '; Secure' : '';
+    35:   const host = window.location.hostname;
+    36:   const domainCandidates = Array.from(
+    37:     new Set(
+
+### lib/components/ui/empty-state.tsx:32
+    29:   const resolvedTitle =
+    30:     title ? (type === 'no-results' ? 'SonuÃ§ bulunamadÄ±' : type === 'no-data' ? 'HenÃ¼z veri yok' : 'No data found')
+    31: 
+>>  32:   const resolvedDescription =
+    33:     description 
+    34:     (type === 'no-results'
+    35:        'Filtreleri deÄŸiÅŸtirerek tekrar deneyin.'
+
+### lib/components/ui/pagination.tsx:65
+    62:               <span key={`ellipsis-${index}`} className="px-2">
+    63:                 ...
+    64:               </span>
+>>  65:             ) : (
+    66:               <Button
+    67:                 key={page}
+    68:                 variant={currentPage === page ? 'default' : 'outline'}
+
+### lib/components/ui/use-toast.ts:27
+    24: type Action =
+    25:   | { type: 'ADD_TOAST'; toast: ToasterToast }
+    26:   | { type: 'UPDATE_TOAST'; toast: Partial<ToasterToast> }
+>>  27:   | { type: 'DISMISS_TOAST'; toastId': ToasterToast['id'] }
+    28:   | { type: 'REMOVE_TOAST'; toastId': ToasterToast['id'] }
+    29: 
+    30: interface State {
+
+### lib/hooks/use-protected-route.tsx:56
+    53:     isLoading,
+    54:     isAuthenticated,
+    55:     hasRequiredRole: minimumRole
+>>  56:        user
+    57:          hasMinimumRole(user.role as UserRole, minimumRole)
+    58:         : false
+    59:       : true,
+
+### lib/personel-mappers.ts:38
+    35: }
+    36: 
+    37: export function mapRolToDb(value: string | null | undefined): 'teknisyen' | 'yetkili' {
+>>  38:   return (value ? '').toLowerCase().trim() === 'yetkili' ? 'yetkili' : 'teknisyen';
+    39: }
+    40: 
+
+### lib/settings/settings-store.ts:55
+    52:   const fontSizeRaw = getString(raw.fontSize, DEFAULT_APP_SETTINGS.theme.fontSize);
+    53:   const fontSize = ['small', 'medium', 'large'].includes(fontSizeRaw)
+    54:      (fontSizeRaw as ThemeSettings['fontSize'])
+>>  55:     : DEFAULT_APP_SETTINGS.theme.fontSize;
+    56: 
+    57:   return {
+    58:     primaryColor: getString(raw.primaryColor, DEFAULT_APP_SETTINGS.theme.primaryColor),
+
+### lib/sync/sync-manager.ts:178
+   175:           return {
+   176:             field: column.dbField,
+   177:             expectedColumn: column.sheetColumn,
+>> 178:             expectedHeader: expectedIdx >= 0 ? headers[expectedIdx] ? null : null,
+   179:             resolvedColumn: currentIdx >= 0 ? currentIdx + 1 : null,
+   180:             resolvedHeader: currentIdx >= 0 ? headers[currentIdx] ? null : null,
+   181:           };

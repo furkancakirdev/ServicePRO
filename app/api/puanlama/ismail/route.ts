@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const ay = searchParams.get('ay');
 
     if (!ay || !/^\d{4}-\d{2}$/.test(ay)) {
-      return NextResponse.json({ error: 'Geçersiz ay formatı. Beklenen: YYYY-MM' }, { status: 400 });
+      return NextResponse.json({ error: 'Gecersiz ay formati. Beklenen: YYYY-MM' }, { status: 400 });
     }
 
     const items = await prisma.ismailDegerlendirme.findMany({
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ay, items });
   } catch (error) {
     console.error('GET /api/puanlama/ismail error:', error);
-    return NextResponse.json({ error: 'İsmail değerlendirmeleri alınamadı' }, { status: 500 });
+    return NextResponse.json({ error: 'Ismail degerlendirmeleri alinamadi' }, { status: 500 });
   }
 }
 
@@ -55,41 +55,26 @@ export async function POST(request: Request) {
     const parsed = payloadSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Geçersiz istek verisi', details: parsed.error.flatten() },
+        { error: 'Gecersiz istek verisi', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const { personelId, ay, puan, notlar, forceOverwrite } = parsed.data;
-    const isAdmin = auth.payload.role === 'ADMIN';
+    const { personelId, ay, puan, notlar } = parsed.data;
 
     const personel = await prisma.personel.findUnique({
       where: { id: personelId, deletedAt: null },
-      select: { id: true, ad: true, rol: true },
+      select: { id: true, ad: true },
     });
 
     if (!personel) {
-      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 });
+      return NextResponse.json({ error: 'Personel bulunamadi' }, { status: 404 });
     }
 
     const existing = await prisma.ismailDegerlendirme.findUnique({
       where: { personnelId_ay: { personnelId: personelId, ay } },
       select: { kilitlendi: true },
     });
-
-    if (existing?.kilitlendi && !forceOverwrite) {
-      return NextResponse.json(
-        { error: 'Bu değerlendirme kilitli. Güncelleme için admin overwrite gerekir.' },
-        { status: 423 }
-      );
-    }
-
-    if (existing?.kilitlendi && forceOverwrite && !isAdmin) {
-      return NextResponse.json(
-        { error: 'Kilitli kaydı sadece admin overwrite edebilir.' },
-        { status: 403 }
-      );
-    }
 
     const saved = await prisma.ismailDegerlendirme.upsert({
       where: { personnelId_ay: { personnelId: personelId, ay } },
@@ -116,16 +101,17 @@ export async function POST(request: Request) {
       ay,
       puan: saved.puan,
       kayitTarihi: saved.kayitTarihi,
+      kilitlendi: saved.kilitlendi,
     });
   } catch (error) {
     console.error('POST /api/puanlama/ismail error:', error);
-    return NextResponse.json({ error: 'İsmail değerlendirmesi kaydedilemedi' }, { status: 500 });
+    return NextResponse.json({ error: 'Ismail degerlendirmesi kaydedilemedi' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await requireAuth(request, ['ADMIN']);
+    const auth = await requireAuth(request, ['ADMIN', 'YETKILI']);
     if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(request.url);
@@ -139,36 +125,24 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const existing = await prisma.ismailDegerlendirme.findUnique({
-      where: { personnelId_ay: { personnelId: personelId, ay } },
-      select: { kilitlendi: true },
-    });
-
-    if (existing?.kilitlendi) {
-      return NextResponse.json(
-        { error: 'Kilitli değerlendirme silinemez. Önce kilidi açın.' },
-        { status: 423 }
-      );
-    }
-
     const result = await prisma.ismailDegerlendirme.deleteMany({
       where: { personnelId: personelId, ay },
     });
 
     if (result.count === 0) {
       return NextResponse.json(
-        { error: 'Silinecek kayıt bulunamadı' },
+        { error: 'Silinecek kayit bulunamadi' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'İsmail usta değerlendirmesi başarıyla silindi',
+      message: 'Ismail usta degerlendirmesi basariyla silindi',
     });
   } catch (error) {
     console.error('DELETE /api/puanlama/ismail error:', error);
-    return NextResponse.json({ error: 'Değerlendirme silinemedi' }, { status: 500 });
+    return NextResponse.json({ error: 'Degerlendirme silinemedi' }, { status: 500 });
   }
 }
 
@@ -180,7 +154,7 @@ export async function PATCH(request: Request) {
     const parsed = lockPayloadSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Geçersiz kilitleme isteği', details: parsed.error.flatten() },
+        { error: 'Gecersiz kilitleme istegi', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -199,7 +173,6 @@ export async function PATCH(request: Request) {
     });
   } catch (error) {
     console.error('PATCH /api/puanlama/ismail error:', error);
-    return NextResponse.json({ error: 'Kilitleme işlemi başarısız' }, { status: 500 });
+    return NextResponse.json({ error: 'Kilitleme islemi basarisiz' }, { status: 500 });
   }
 }
-

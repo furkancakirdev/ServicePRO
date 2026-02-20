@@ -1,0 +1,59 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to NAS Server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            echo "🚀 Deploying ServicePro to NAS Server..."
+            echo "================================================"
+
+            # Navigate to project directory
+            cd /home/${{ secrets.NAS_USER }}/servicepro || cd /mnt/user/servicepro
+
+            echo "📥 Pulling latest changes..."
+            git fetch origin
+            git reset --hard origin/master
+
+            echo "📦 Installing dependencies..."
+            npm ci
+
+            echo "🔧 Generating Prisma Client..."
+            npx prisma generate
+
+            echo "🏗️ Building Next.js app..."
+            npm run build
+
+            echo "🔄 Restarting Docker containers..."
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --build
+
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f
+
+            echo "✅ Deploy completed successfully!"
+            echo "================================================"
+
+            # Show container status
+            docker-compose ps

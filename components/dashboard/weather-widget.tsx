@@ -206,7 +206,7 @@ export default function WeatherWidget() {
               rel="noreferrer"
               className="rounded-full border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-xs font-medium text-slate-200 transition-colors hover:bg-slate-700/80"
             >
-              Ventusky'de ac
+              Ventusky&#39;de ac
             </a>
             <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${risk.className}`}>
               {risk.label}

@@ -1,42 +1,35 @@
 'use client';
 
 import Link from 'next/link';
+import { LockKeyhole, Undo2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function UnauthorizedPage() {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-    >
-      <div className="hero-panel" style={{ maxWidth: '540px', width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔒</div>
-        <h1 style={{ fontSize: '30px', fontWeight: 700, marginBottom: '12px' }}>Yetkisiz Erişim</h1>
-        <p style={{ fontSize: '15px', color: '#c6d8e8', marginBottom: '28px', lineHeight: 1.6 }}>
-          Bu sayfaya erişim yetkiniz bulunmuyor. Lütfen yöneticinizle iletişime geçin veya ana sayfaya dönün.
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.14),transparent_45%),linear-gradient(180deg,#08111d_0%,#0f172a_100%)] px-4 py-8">
+      <div className="w-full max-w-xl rounded-2xl border border-rose-900/60 bg-slate-950/80 p-6 text-center shadow-2xl backdrop-blur-sm">
+        <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300">
+          <LockKeyhole className="h-7 w-7" />
+        </div>
+        <h1 className="text-2xl font-semibold text-white">Bu sayfaya erisim izniniz yok</h1>
+        <p className="mt-2 text-sm text-slate-300">
+          Rolunuz bu ekrani acmaya uygun degil. Ana ekrana donerek calismaya devam edebilirsiniz.
         </p>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/" className="btn btn-primary">
-            Ana Sayfaya Dön
-          </Link>
-          <button onClick={() => window.history.back()} className="btn btn-secondary">
-            Geri Dön
-          </button>
+        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/65 px-3 py-2 text-xs text-slate-300">
+          Ne yapmaliyim? Yoneticinizden gerekli yetkiyi isteyin veya uygun menuye geri donun.
         </div>
 
-        <p style={{ marginTop: '24px', fontSize: '13px', color: '#9fb6c9' }}>
-          Sorun devam ediyorsa:{' '}
-          <a href="mailto:support@servicepro.com" style={{ color: 'var(--color-primary-light)', textDecoration: 'none' }}>
-            support@servicepro.com
-          </a>
-        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <Link href="/">
+            <Button>Ana ekrana don</Button>
+          </Link>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            <Undo2 className="mr-1 h-4 w-4" />
+            Geri git
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
-

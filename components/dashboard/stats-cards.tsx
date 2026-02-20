@@ -17,11 +17,18 @@ type StatCard = {
   key: string;
   label: string;
   value: number;
-  description: string;
-  className: string;
+  variant: 'default' | 'success' | 'warning' | 'info';
   icon: ComponentType<{ className?: string }>;
 };
 
+/**
+ * Grand Maritime StatsCards Component
+ *
+ * KPI cards with:
+ * - Navy/gold color scheme
+ * - Icon containers with gradients
+ * - Consistent spacing and typography
+ */
 export default function StatsCards({
   bugunToplamOperasyon,
   aktifServisler,
@@ -32,65 +39,95 @@ export default function StatsCards({
   const cards: StatCard[] = [
     {
       key: 'today',
-      label: 'Bugun Operasyon',
+      label: 'Bugün Operasyon',
       value: bugunToplamOperasyon,
-      description: 'Bugun planlanan toplam operasyon',
-      className: 'border-sky-500/35 bg-sky-500/10 text-sky-200',
+      variant: 'info',
       icon: CalendarCheck2,
     },
     {
       key: 'active',
       label: 'Aktif Servis',
       value: aktifServisler,
-      description: 'Su an acik olan isler',
-      className: 'border-indigo-500/35 bg-indigo-500/10 text-indigo-200',
+      variant: 'default',
       icon: Activity,
     },
     {
       key: 'completed',
-      label: 'Bugun Tamamlanan',
+      label: 'Bugün Tamamlanan',
       value: bugunTamamlanan,
-      description: 'Ayni gun icinde kapanan isler',
-      className: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-200',
+      variant: 'success',
       icon: Wrench,
     },
     {
       key: 'overdue',
-      label: 'Geciken Is',
+      label: 'Geciken İş',
       value: gecikenServisler,
-      description: gecikenServisler > 0 ? 'Takip gerektiren gecikmeler var' : 'Geciken is yok',
-      className:
-        gecikenServisler > 0
-          ? 'border-red-500/40 bg-red-500/10 text-red-200'
-          : 'border-slate-700 bg-slate-800/60 text-slate-200',
+      variant: gecikenServisler > 0 ? 'warning' : 'default',
       icon: AlertTriangle,
     },
   ];
 
+  const getVariantStyles = (variant: StatCard['variant']) => {
+    switch (variant) {
+      case 'success':
+        return {
+          bg: 'bg-gradient-to-br from-seafoam-500 to-seafoam-700',
+          border: 'border-l-seafoam-500',
+        };
+      case 'warning':
+        return {
+          bg: 'bg-gradient-to-br from-sunset-500 to-sunset-700',
+          border: 'border-l-sunset-500',
+        };
+      case 'info':
+        return {
+          bg: 'bg-gradient-to-br from-skyblue-500 to-skyblue-700',
+          border: 'border-l-skyblue-500',
+        };
+      default:
+        return {
+          bg: 'bg-gradient-to-br from-navy-700 to-navy-900',
+          border: 'border-l-navy-700',
+        };
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-      {cards.map((card) => (
-        <Card key={card.key} className={`backdrop-blur-sm ${card.className}`}>
-          <CardContent className="p-4">
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-5 bg-slate-700" />
-                <Skeleton className="h-6 w-20 bg-slate-700" />
-                <Skeleton className="h-4 w-full bg-slate-700" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <card.icon className="h-4 w-4" />
-                  <span className="text-2xl font-semibold">{card.value}</span>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {cards.map((card) => {
+        const styles = getVariantStyles(card.variant);
+        return (
+          <Card
+            key={card.key}
+            className={`border-l-4 ${styles.border} transition-shadow hover:shadow-md`}
+          >
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="space-y-3 p-6">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <Skeleton className="h-7 w-16" />
+                  <Skeleton className="h-4 w-24" />
                 </div>
-                <p className="text-sm font-medium">{card.label}</p>
-                <p className="text-xs text-slate-300/80">{card.description}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              ) : (
+                <div className="flex items-center gap-4 p-6">
+                  {/* Icon container with gradient */}
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-lg ${styles.bg} shadow-sm`}>
+                    <card.icon className="h-6 w-6 text-white" />
+                  </div>
+
+                  {/* Value and label */}
+                  <div>
+                    <p className="font-display text-2xl font-bold text-navy-900">
+                      {card.value}
+                    </p>
+                    <p className="text-sm text-slate-500">{card.label}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

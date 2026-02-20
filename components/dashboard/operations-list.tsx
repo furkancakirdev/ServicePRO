@@ -86,7 +86,7 @@ export default function OperationsList({ operations, loading = false }: Operatio
             {operations.map((op) => (
               <Link
                 key={op.id}
-                href={`/services/${op.id}/edit`}
+                href={`/servisler/${op.id}/duzenle`}
                 className="block group"
               >
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:bg-slate-800/50 hover:border-slate-600 transition-all">

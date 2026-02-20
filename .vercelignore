@@ -1,0 +1,28 @@
+# Never upload secrets
+.env
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# Dependencies / build output
+node_modules
+.next
+dist
+out
+coverage
+
+# Local scratch / logs
+.tmp
+*.log
+sync_error.log
+tsconfig*.tsbuildinfo
+*.tsbuildinfo
+
+# Local tooling config
+.vercel
+.vercel-global
+
+# OS / editor
+.DS_Store
+Thumbs.db

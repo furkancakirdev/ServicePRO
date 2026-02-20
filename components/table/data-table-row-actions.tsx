@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -34,7 +34,7 @@ interface DataTableRowActionsProps {
 function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
   const token = window.localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export const DataTableRowActions = React.memo(function DataTableRowActions({
@@ -72,11 +72,11 @@ export const DataTableRowActions = React.memo(function DataTableRowActions({
       }
 
       onDeleted?.(service.id);
-      toast.success('Servis kaydi silindi');
+      toast.success('Servis kaydı silindi');
       setIsDeleteOpen(false);
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Silme islemi basarisiz';
+      const message = error instanceof Error ? error.message : 'Silme işlemi başarısız';
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -91,23 +91,23 @@ export const DataTableRowActions = React.memo(function DataTableRowActions({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-11 w-11"
             onClick={(event) => event.stopPropagation()}
           >
-            <span className="sr-only">Satir islemleri</span>
+            <span className="sr-only">Satır işlemleri</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-52 border-slate-800 bg-slate-900 text-slate-100"
+          className="w-52 border-border bg-popover text-popover-foreground"
           onClick={(event) => event.stopPropagation()}
         >
-          <DropdownMenuLabel>Islemler</DropdownMenuLabel>
+          <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push(`/servisler/${service.id}/duzenle`)}>
             <PencilLine className="mr-2 h-4 w-4" />
-            Duzenle
+            Düzenle
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -123,14 +123,14 @@ export const DataTableRowActions = React.memo(function DataTableRowActions({
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent onClick={(event) => event.stopPropagation()}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Servis kaydi silinsin mi?</AlertDialogTitle>
+            <AlertDialogTitle>Servis kaydı silinsin mi?</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-medium text-foreground">{service.tekneAdi}</span> kaydi soft delete ile
-              kaldirilacak. Bu islem geri alinabilir ama listeden aninda duser.
+              <span className="font-medium text-foreground">{service.tekneAdi}</span> kaydı soft delete ile
+              kaldırılacak. Bu işlem geri alınabilir ama listeden anında düşer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Vazgec</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Vazgeç</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();

@@ -14,6 +14,7 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
+  organizationId String   @default("org_default") @map("organization_id")
   email         String    @unique
   passwordHash  String    @map("password_hash")
   ad            String
@@ -45,8 +46,10 @@ enum UserRole {
 
 model Personel {
   id            String         @id @default(cuid())
+  organizationId String        @default("org_default") @map("organization_id")
   ad            String
   unvan         PersonelUnvan  @default(CIRAK)
+  unvanId       String?        @map("unvan_id")
   rol           String         @default("teknisyen") // teknisyen, yetkili
   aktif         Boolean        @default(true)
   girisYili     Int?           @map("giris_yili")
@@ -65,9 +68,11 @@ model Personel {
   yetkiliDegerlendirmeleriCirak  YetkiliDegerlendirmeCirak[]
   ismailDegerlendirmeleri        IsmailDegerlendirme[]
   aylikPerformanslar    AylikPerformans[]
+  unvanAyari            PersonelUnvanAyar? @relation("Personel_UnvanAyari", fields: [unvanId], references: [id], onDelete: SetNull)
 
   @@index([aktif])
   @@index([unvan])
+  @@index([unvanId])
   @@map("personel")
 }
 
@@ -82,6 +87,7 @@ enum PersonelUnvan {
 
 model Tekne {
   id            String    @id @default(cuid())
+  organizationId String   @default("org_default") @map("organization_id")
   ad            String
   seriNo        String?   @unique @map("seri_no")
   marka         String?
@@ -113,7 +119,9 @@ model Tekne {
 
 model Service {
   id               String        @id @default(cuid())
+  organizationId   String        @default("org_default") @map("organization_id")
   tarih            DateTime?     @db.Date
+  tahminiBitisTarihi DateTime?   @map("tahmini_bitis_tarihi") @db.Date
   saat             String?
   isTuru           IsTuru        @default(PAKET) @map("is_turu")
   tekneId          String        @map("tekne_id")
@@ -124,6 +132,8 @@ model Service {
   irtibatKisi      String?       @map("irtibat_kisi")
   telefon          String?
   durum            ServisDurumu  @default(RANDEVU_VERILDI) @map("durum")
+  durumId          String?       @map("durum_id")
+  konumId          String?       @map("konum_id")
   ofisYetkiliId    String?       @map("ofisyetkili_id")
   taseronNotlari   String?       @map("taseron_notlari")
 
@@ -139,6 +149,8 @@ model Service {
   // Relations
   tekne            Tekne         @relation("Tekne_Servisler", fields: [tekneId], references: [id], onDelete: Cascade)
   ofisYetkili      User?         @relation("User_OfisServisler", fields: [ofisYetkiliId], references: [id])
+  durumAyari       ServisDurumuAyar? @relation("Servis_DurumAyari", fields: [durumId], references: [id], onDelete: SetNull)
+  konumAyari       Konum?        @relation("Servis_KonumAyari", fields: [konumId], references: [id], onDelete: SetNull)
   personeller      ServicePersonel[]
   bekleyenParcalar ParcaBekleme[]
   puanlar          ServisPuan[]
@@ -150,6 +162,8 @@ model Service {
   @@index([isTuru])
   @@index([tekneId])
   @@index([ofisYetkiliId])
+  @@index([durumId])
+  @@index([konumId])
   @@index([deletedAt, tarih])
   @@index([yer]) // YENİ: Lokasyon bazlı filtreleme için
   @@map("servis")
@@ -429,6 +443,7 @@ enum Rozet {
 
 model AuditLog {
   id          String   @id @default(cuid())
+  organizationId String? @map("organization_id")
   userId      String?  @map("user_id")
   userEmail   String?  @map("user_email")
   islemTuru   String   @map("islem_turu") // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
@@ -453,6 +468,7 @@ model AuditLog {
 
 model Setting {
   id          String   @id @default(cuid())
+  organizationId String @default("org_default") @map("organization_id")
   anahtar     String   @unique
   deger       String   @db.Text
   aciklama    String?  @db.Text
@@ -553,4 +569,68 @@ model KatsayiGecmisi {
 
   @@index([isTuru])
   @@map("katsayi_gecmisi")
+}
+
+model ServisDurumuAyar {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  description String?   @db.Text
+  color       String
+  icon        String?
+  sirasi      Int       @default(0)
+  aktif       Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  services    Service[] @relation("Servis_DurumAyari")
+
+  @@index([aktif, sirasi])
+  @@map("servis_durumlari")
+}
+
+model Konum {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  adres       String?
+  telefon     String?
+  sirasi      Int       @default(0)
+  aktif       Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  services    Service[] @relation("Servis_KonumAyari")
+
+  @@index([aktif, sirasi])
+  @@map("konumlar")
+}
+
+model PersonelUnvanAyar {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  label       String
+  puanCarpani Decimal    @default(1.0) @db.Decimal(6, 2)
+  sirasi      Int        @default(0)
+  aktif       Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  personeller Personel[] @relation("Personel_UnvanAyari")
+
+  @@index([aktif, sirasi])
+  @@map("personel_unvanlari")
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  category    String
+  description String?  @db.Text
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("system_settings")
 }

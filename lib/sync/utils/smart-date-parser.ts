@@ -1,6 +1,6 @@
 ﻿const DD_MM_YYYY_RE = /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$/;
 const YYYY_MM_DD_RE = /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/;
-const NUMERIC_RE = /^-?\d+(\.\d+)?$/;
+const NUMERIC_RE = /^-?\d+([.,]\d+)?$/;
 
 const SERIAL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -97,8 +97,12 @@ function toUtcDate(parts: DateParts): Date {
 }
 
 function parseExcelSerialDate(raw: string): DateParts | null {
-  if (!NUMERIC_RE.test(raw)) return null;
-  const serial = Number(raw);
+  const normalized = raw
+    .replace(/^'+|'+$/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!NUMERIC_RE.test(normalized)) return null;
+  const serial = Number(normalized);
   if (!Number.isFinite(serial) || serial < SERIAL_MIN || serial > SERIAL_MAX) {
     return null;
   }

@@ -1,232 +1,246 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { DurumDialog, type DurumFormVerisi } from '@/components/admin/durumlar/DurumDialog';
+import { DurumlarTable, type DurumKaydiDto } from '@/components/admin/durumlar/DurumlarTable';
 import { useAuth } from '@/lib/auth/auth-context';
-import { ServisDurumu } from '@prisma/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface DurumBilgisi {
-  deger: ServisDurumu;
-  ad: string;
-  aciklama: string;
-  renk: string;
-  ikon: string;
-  siralama: number;
-}
+type DialogDurumu = {
+  acik: boolean;
+  mod: 'create' | 'edit';
+  hedef: DurumKaydiDto | null;
+};
 
-const durumlar: DurumBilgisi[] = [
-  {
-    deger: ServisDurumu.RANDEVU_VERILDI,
-    ad: 'Randevu Verildi',
-    aciklama: 'Müşteri için randevu tarihi belirlendi, servis planlandı.',
-    renk: '#3b82f6',
-    ikon: '📅',
-    siralama: 1,
-  },
-  {
-    deger: ServisDurumu.DEVAM_EDİYOR,
-    ad: 'Devam Ediyor',
-    aciklama: 'Servis işlemleri aktif olarak sürdürülüyor.',
-    renk: '#f59e0b',
-    ikon: '⚙️',
-    siralama: 2,
-  },
-  {
-    deger: ServisDurumu.PARCA_BEKLIYOR,
-    ad: 'Parça Bekliyor',
-    aciklama: 'Servis işlemleri parça tedarik awaiting bekleniyor.',
-    renk: '#ef4444',
-    ikon: '🔧',
-    siralama: 3,
-  },
-  {
-    deger: ServisDurumu.MUSTERI_ONAY_BEKLIYOR,
-    ad: 'Müşteri Onayı Bekliyor',
-    aciklama: 'Müşteriden onay veya bilgi bekleniyor.',
-    renk: '#8b5cf6',
-    ikon: '📞',
-    siralama: 4,
-  },
-  {
-    deger: ServisDurumu.RAPOR_BEKLIYOR,
-    ad: 'Rapor Bekliyor',
-    aciklama: 'Teknik rapor veya dokümantasyon bekleniyor.',
-    renk: '#06b6d4',
-    ikon: '📋',
-    siralama: 5,
-  },
-  {
-    deger: ServisDurumu.KESIF_KONTROL,
-    ad: 'Keşif/Kontrol',
-    aciklama: 'Teknik keşif veya kontrol aşamasında.',
-    renk: '#ec4899',
-    ikon: '🔍',
-    siralama: 6,
-  },
-  {
-    deger: ServisDurumu.TAMAMLANDI,
-    ad: 'Tamamlandı',
-    aciklama: 'Servis işlemleri başarıyla tamamlandı.',
-    renk: '#22c55e',
-    ikon: '✅',
-    siralama: 7,
-  },
-  {
-    deger: ServisDurumu.IPTAL,
-    ad: 'İptal',
-    aciklama: 'Servis iptal edildi.',
-    renk: '#6b7280',
-    ikon: '❌',
-    siralama: 8,
-  },
-  {
-    deger: ServisDurumu.ERTELENDI,
-    ad: 'Ertelendi',
-    aciklama: 'Servis ileri bir tarihe ertelendi.',
-    renk: '#f97316',
-    ikon: '⏰',
-    siralama: 9,
-  },
-];
+const ILK_DIALOG_DURUMU: DialogDurumu = {
+  acik: false,
+  mod: 'create',
+  hedef: null,
+};
 
 export default function DurumlarPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
+
+  const [durumlar, setDurumlar] = useState<DurumKaydiDto[]>([]);
+  const [veriYukleniyor, setVeriYukleniyor] = useState(true);
+  const [kaydetmeYukleniyor, setKaydetmeYukleniyor] = useState(false);
+  const [silinenDurumId, setSilinenDurumId] = useState<string | null>(null);
+  const [dialogDurumu, setDialogDurumu] = useState<DialogDurumu>(ILK_DIALOG_DURUMU);
+
+  async function durumlariYukle(): Promise<void> {
+    setVeriYukleniyor(true);
+    try {
+      const response = await fetch('/api/admin/durumlar', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Durumlar yüklenemedi');
+      }
+
+      const body = (await response.json()) as DurumKaydiDto[];
+      setDurumlar(body);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Durumlar yüklenemedi');
+    } finally {
+      setVeriYukleniyor(false);
+    }
+  }
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
-    // Sadece ADMIN erişebilir
     if (user.role !== 'ADMIN') {
-      router.push('/dashboard');
+      router.replace('/');
       return;
     }
-    setLoading(false);
-  }, [user, router]);
+    void durumlariYukle();
+  }, [isLoading, router, user]);
 
-  if (loading) {
+  const dialogVarsayilanDegerleri = useMemo<Partial<DurumFormVerisi> | undefined>(() => {
+    if (dialogDurumu.mod !== 'edit' || !dialogDurumu.hedef) return undefined;
+    return {
+      key: dialogDurumu.hedef.key,
+      label: dialogDurumu.hedef.label,
+      description: dialogDurumu.hedef.description ?? '',
+      color: dialogDurumu.hedef.color,
+      icon: dialogDurumu.hedef.icon ?? '',
+      sirasi: dialogDurumu.hedef.sirasi,
+      aktif: dialogDurumu.hedef.aktif,
+    };
+  }, [dialogDurumu.hedef, dialogDurumu.mod]);
+
+  async function durumKaydet(formVerisi: DurumFormVerisi): Promise<void> {
+    setKaydetmeYukleniyor(true);
+    try {
+      const payload = {
+        key: formVerisi.key,
+        label: formVerisi.label,
+        description: formVerisi.description || null,
+        color: formVerisi.color,
+        icon: formVerisi.icon || null,
+        sirasi: formVerisi.sirasi,
+        aktif: formVerisi.aktif,
+      };
+
+      if (dialogDurumu.mod === 'create') {
+        const response = await fetch('/api/admin/durumlar', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({ error: 'Durum eklenemedi' }));
+          throw new Error(typeof body.error === 'string' ? body.error : 'Durum eklenemedi');
+        }
+
+        toast.success('Durum eklendi');
+      } else if (dialogDurumu.hedef) {
+        const response = await fetch(`/api/admin/durumlar/${dialogDurumu.hedef.id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({ error: 'Durum güncellenemedi' }));
+          throw new Error(typeof body.error === 'string' ? body.error : 'Durum güncellenemedi');
+        }
+
+        toast.success('Durum güncellendi');
+      }
+
+      setDialogDurumu(ILK_DIALOG_DURUMU);
+      await durumlariYukle();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Durum kaydedilemedi');
+    } finally {
+      setKaydetmeYukleniyor(false);
+    }
+  }
+
+  async function durumSil(durum: DurumKaydiDto): Promise<void> {
+    if (!window.confirm(`"${durum.label}" durumunu silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+
+    setSilinenDurumId(durum.id);
+    try {
+      const response = await fetch(`/api/admin/durumlar/${durum.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: 'Durum silinemedi' }));
+        throw new Error(typeof body.error === 'string' ? body.error : 'Durum silinemedi');
+      }
+
+      toast.success('Durum silindi');
+      await durumlariYukle();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Durum silinemedi');
+    } finally {
+      setSilinenDurumId(null);
+    }
+  }
+
+  if (isLoading || veriYukleniyor) {
     return (
-      <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        Yükleniyor...
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-6 text-sm text-slate-300">
+        Durumlar yükleniyor...
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
-      <header className="hero-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <div className="hero-content">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-            <Link
-              href="/ayarlar"
-              className="btn btn-secondary"
-              style={{ padding: 'var(--space-xs) var(--space-sm)' }}
-            >
-              ←
-            </Link>
-            <div>
-              <h1 className="hero-title">Durum Yönetimi</h1>
-              <p className="hero-subtitle">Servis durumları ve açıklamaları</p>
-            </div>
+    <div className="space-y-4">
+      <header className="hero-panel flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/ayarlar">
+            <Button variant="secondary" size="icon" aria-label="Ayarlar sayfasına dön">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="page-title">Durum Yönetimi</h1>
+            <p className="page-subtitle">Toplam {durumlar.length} durum kaydı</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            className="gap-2"
+            onClick={() => void durumlariYukle()}
+            disabled={veriYukleniyor}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Yenile
+          </Button>
+          <Button
+            className="gap-2"
+            data-testid="status-create-button"
+            onClick={() =>
+              setDialogDurumu({
+                acik: true,
+                mod: 'create',
+                hedef: null,
+              })
+            }
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Ekle
+          </Button>
         </div>
       </header>
 
-      <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-          Servis durumları, servis kayıtlarının iş akışını takip etmek için kullanılır.
-          Her durumun spesifik bir anlamı ve işlevi vardır. Bu durumlar sistem tarafından
-          tanımlanmıştır ve değiştirilemez.
-        </p>
-      </div>
+      <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+        <CardHeader>
+          <CardTitle className="text-slate-100">Servis Durumları</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DurumlarTable
+            durumlar={durumlar}
+            silinenDurumId={silinenDurumId}
+            onDuzenle={(durum) =>
+              setDialogDurumu({
+                acik: true,
+                mod: 'edit',
+                hedef: durum,
+              })
+            }
+            onSil={durumSil}
+          />
+        </CardContent>
+      </Card>
 
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-lg)' }}>
-        {durumlar.sort((a, b) => a.siralama - b.siralama).map((durum) => (
-          <div
-            key={durum.deger}
-            className="surface-panel"
-            style={{
-              borderLeft: `4px solid ${durum.renk}`,
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-md)' }}>
-              <div
-                style={{
-                  fontSize: '2rem',
-                  lineHeight: 1,
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                }}
-              >
-                {durum.ikon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3
-                  className="card-title"
-                  style={{
-                    marginBottom: 'var(--space-xs)',
-                    color: durum.renk,
-                  }}
-                >
-                  {durum.ad}
-                </h3>
-                <p
-                  style={{
-                    color: 'var(--color-text-muted)',
-                    fontSize: '0.85rem',
-                    margin: 0,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {durum.aciklama}
-                </p>
-                <div
-                  style={{
-                    marginTop: 'var(--space-sm)',
-                    padding: 'var(--space-xs) var(--space-sm)',
-                    background: 'var(--color-bg-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.75rem',
-                    fontFamily: 'monospace',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  {durum.deger}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className="surface-panel"
-        style={{
-          marginTop: 'var(--space-lg)',
-          border: '1px dashed var(--color-border)',
+      <DurumDialog
+        acik={dialogDurumu.acik}
+        mod={dialogDurumu.mod}
+        kaydediliyor={kaydetmeYukleniyor}
+        varsayilanDegerler={dialogVarsayilanDegerleri}
+        onAcikDegisti={(acik) => {
+          if (!acik) {
+            setDialogDurumu(ILK_DIALOG_DURUMU);
+            return;
+          }
+          setDialogDurumu((prev) => ({ ...prev, acik }));
         }}
-      >
-        <h4 style={{ margin: '0 0 var(--space-sm) 0', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-          ℹ️ Bilgi
-        </h4>
-        <p style={{ color: 'var(--color-text-muted)', margin: 0, fontSize: '0.9rem' }}>
-          Servis durumları veritabanı şemasında tanımlı enum değerleridir. Bu nedenle
-          yeni durum eklemek veya mevcut durumları silmek için veritabanı şemasının
-          güncellenmesi gerekir. Lütfen bu işlem için sistem yöneticisiyle iletişime geçin.
-        </p>
-      </div>
+        onKaydet={durumKaydet}
+      />
     </div>
   );
 }

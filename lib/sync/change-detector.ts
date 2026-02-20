@@ -13,6 +13,20 @@ import { ChangeRecord, TRANSFORMS } from './types';
 type GenericRecord = Record<string, unknown>;
 type SoftDeleteSheetKey = 'PLANLAMA' | 'PERSONEL' | 'TEKNELER';
 
+const DEFAULT_ORGANIZATION_ID = (process.env.DEFAULT_ORGANIZATION_ID || 'org_default').trim() || 'org_default';
+
+function withDefaultOrganization(data: GenericRecord): GenericRecord {
+  const current = data.organizationId;
+  if (typeof current === 'string' && current.trim().length > 0) {
+    return data;
+  }
+
+  return {
+    ...data,
+    organizationId: DEFAULT_ORGANIZATION_ID,
+  };
+}
+
 export class ChangeDetector {
   private prisma: PrismaClient;
   private auth: JWT;
@@ -400,6 +414,7 @@ export class ChangeDetector {
    */
   private async applyChangeToDb(sheetKey: SheetKey, change: ChangeRecord): Promise<void> {
     const data = this.toMutationData(change.after);
+    const dataWithOrg = withDefaultOrganization(data);
     switch (sheetKey) {
       case 'PLANLAMA':
         if (change.type === 'DELETE') {
@@ -410,8 +425,8 @@ export class ChangeDetector {
         } else {
           await this.prisma.service.upsert({
             where: { id: change.id },
-            update: data as Prisma.ServiceUncheckedUpdateInput,
-            create: { id: change.id, ...data } as Prisma.ServiceUncheckedCreateInput,
+            update: dataWithOrg as Prisma.ServiceUncheckedUpdateInput,
+            create: { id: change.id, ...dataWithOrg } as Prisma.ServiceUncheckedCreateInput,
           });
         }
         break;
@@ -424,8 +439,8 @@ export class ChangeDetector {
         } else {
           await this.prisma.personel.upsert({
             where: { id: change.id },
-            update: data as Prisma.PersonelUncheckedUpdateInput,
-            create: { id: change.id, ...data } as Prisma.PersonelUncheckedCreateInput,
+            update: dataWithOrg as Prisma.PersonelUncheckedUpdateInput,
+            create: { id: change.id, ...dataWithOrg } as Prisma.PersonelUncheckedCreateInput,
           });
         }
         break;
@@ -438,8 +453,8 @@ export class ChangeDetector {
         } else {
           await this.prisma.tekne.upsert({
             where: { id: change.id },
-            update: data as Prisma.TekneUncheckedUpdateInput,
-            create: { id: change.id, ...data } as Prisma.TekneUncheckedCreateInput,
+            update: dataWithOrg as Prisma.TekneUncheckedUpdateInput,
+            create: { id: change.id, ...dataWithOrg } as Prisma.TekneUncheckedCreateInput,
           });
         }
         break;

@@ -2,19 +2,58 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSyncManager } from '@/lib/sync/sync-manager';
 import { prisma } from '@/lib/prisma';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
+const RETRY_BACKOFF_MS = [1000, 2000, 5000] as const;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runWithRetry<T>(label: string, task: () => Promise<T>): Promise<T> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= RETRY_BACKOFF_MS.length; attempt += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= RETRY_BACKOFF_MS.length) break;
+      const backoffMs = RETRY_BACKOFF_MS[attempt];
+      console.warn(`[cron-sync] ${label} failed on attempt ${attempt + 1}. Retrying in ${backoffMs}ms...`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      await wait(backoffMs);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`[cron-sync] ${label} failed`);
+}
+
 export async function GET(request: NextRequest) {
   // Verify cron secret for security
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   // In development, allow without auth
-  if (process.env.NODE_ENV === 'development') {
-    // Continue without auth
-  } else if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (process.env.NODE_ENV !== 'development') {
+    // In production, never allow this endpoint without a secret.
+    // Vercel Cron automatically sends `Authorization: Bearer ${CRON_SECRET}`
+    // when the environment variable exists.
+    if (!cronSecret) {
+      return NextResponse.json(
+        { error: 'CRON_SECRET not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
   }
 
   try {
@@ -35,7 +74,7 @@ export async function GET(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    const results = await syncManager.syncAllFromSheets(mode);
+    const results = await runWithRetry('syncAllFromSheets', () => syncManager.syncAllFromSheets(mode));
     const duration = Date.now() - startTime;
 
     // Calculate totals

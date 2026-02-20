@@ -1,0 +1,136 @@
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+(node:16632) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+GET /api/services error: PrismaClientKnownRequestError: 
+Invalid `prisma.service.findMany()` invocation:
+
+
+The column `servis.tahmini_bitis_tarihi` does not exist in the current database.
+    at ei.handleRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async GET (webpack-internal:///(rsc)/./app/api/services/route.ts:238:26)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  code: 'P2022',
+  meta: { modelName: 'Service', column: 'servis.tahmini_bitis_tarihi' },
+  clientVersion: '6.19.2'
+}
+GET /api/services error: PrismaClientKnownRequestError: 
+Invalid `prisma.service.findMany()` invocation:
+
+
+The column `servis.tahmini_bitis_tarihi` does not exist in the current database.
+    at ei.handleRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async GET (webpack-internal:///(rsc)/./app/api/services/route.ts:238:26)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  code: 'P2022',
+  meta: { modelName: 'Service', column: 'servis.tahmini_bitis_tarihi' },
+  clientVersion: '6.19.2'
+}
+GET /api/services error: PrismaClientKnownRequestError: 
+Invalid `prisma.service.findMany()` invocation:
+
+
+The column `servis.tahmini_bitis_tarihi` does not exist in the current database.
+    at ei.handleRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async GET (webpack-internal:///(rsc)/./app/api/services/route.ts:238:26)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  code: 'P2022',
+  meta: { modelName: 'Service', column: 'servis.tahmini_bitis_tarihi' },
+  clientVersion: '6.19.2'
+}
+GET /api/services error: PrismaClientKnownRequestError: 
+Invalid `prisma.service.findMany()` invocation:
+
+
+The column `servis.tahmini_bitis_tarihi` does not exist in the current database.
+    at ei.handleRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async GET (webpack-internal:///(rsc)/./app/api/services/route.ts:238:26)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  code: 'P2022',
+  meta: { modelName: 'Service', column: 'servis.tahmini_bitis_tarihi' },
+  clientVersion: '6.19.2'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\.next\cache\webpack\client-development\3.pack.gz_' -> 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\.next\cache\webpack\client-development\3.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\furkan.cakir\Desktop\ServicePro\ServicePro_Demo\.next\cache\webpack\client-development\0.pack.gz'
+^C

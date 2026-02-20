@@ -1,4 +1,4 @@
-﻿services:
+services:
   servicepro:
     build:
       context: .
@@ -7,4 +7,8 @@
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      BACKUP_DIR: /app/backups
+    volumes:
+      - ${NAS_BACKUP_DIR:-./backups}:/app/backups
     restart: unless-stopped

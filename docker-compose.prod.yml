@@ -1,0 +1,32 @@
+services:
+  servicepro:
+    container_name: servicepro-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: servicepro:latest
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      BACKUP_DIR: /app/backups
+      NAS_BACKUP_DIR: /app/backups
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ${NAS_BACKUP_DIR}:/app/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  migrate:
+    image: servicepro:latest
+    profiles: ["ops"]
+    env_file:
+      - .env.production
+    command: ["npx", "prisma", "migrate", "deploy"]

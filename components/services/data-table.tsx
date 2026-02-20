@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -38,15 +38,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { DatePreset, DatePresetFilter } from '@/components/table/date-preset-filter';
-import { DataTableToolbar } from './data-table-toolbar';
+import { SavedFilters } from '@/components/servisler/SavedFilters';
+import { DataTableToolbar, ToolbarSortOption } from './data-table-toolbar';
 import ServisKapanisModal from '@/components/ServisKapanisModal';
 import {
   ACTIVE_STATUS_VALUES,
-  BOARD_STATUS_ORDER,
   DataGridGroupBy,
-  DataGridViewMode,
   DEFAULT_STATUS_FILTERS,
   QueueFilter,
   ServiceGridInitialState,
@@ -61,7 +59,17 @@ import {
   parseDateOnlyToUtcDate,
 } from '@/lib/date-utils';
 import { normalizeServisDurumuForDb } from '@/lib/domain-mappers';
-import { ChevronLeft, ChevronRight, FolderTree, Layers } from 'lucide-react';
+import {
+  loadServisFilterStateFromStorage,
+  normalizeServisFilterState,
+  saveServisFilterStateToStorage,
+  ServisFilterState,
+} from '@/lib/servisler/filter-state';
+import {
+  buildServisUrlFromFilterState,
+  hasServisFilterParams,
+} from '@/lib/servisler/filter-url';
+import { ChevronLeft, ChevronRight, Clock3, FolderTree, Layers, MapPin, MessageCircleCode, PhoneCall } from 'lucide-react';
 
 interface DataTableProps {
   columns: ColumnDef<ServiceGridRow, unknown>[];
@@ -109,11 +117,14 @@ interface CompletePayload {
   kaliteKontrol: {
     uniteModelVar: boolean;
     uniteSaatiVar: boolean;
-    uniteSaatiMuaf: boolean;
+    uniteSaatiExcludeFromScoring: boolean;
     uniteSeriNoVar: boolean;
     aciklamaYeterli: boolean;
     adamSaatVar: boolean;
-    adamSaatMuaf: boolean;
+    adamSaatExcludeFromScoring: boolean;
+    // legacy aliases for backward compatibility
+    uniteSaatiMuaf?: boolean;
+    adamSaatMuaf?: boolean;
     fotograflarVar: boolean;
   };
   zorlukOverride: 'RUTIN' | 'ARIZA' | 'PROJE' | null;
@@ -129,7 +140,6 @@ const inArrayFilter: FilterFn<ServiceGridRow> = (row, columnId, filterValue) => 
 
 const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_STATUS_VALUES);
 const TERMINAL_STATUS_SET = new Set<string>(['TAMAMLANDI', 'IPTAL', 'ERTELENDI']);
-const TODAY_ACTIVE_STATUS_SET = new Set<string>(['DEVAM_EDIYOR']);
 
 function buildInitialColumnFilters(initialState: ServiceGridInitialState): ColumnFiltersState {
   const filters: ColumnFiltersState = [];
@@ -144,20 +154,30 @@ function buildInitialColumnFilters(initialState: ServiceGridInitialState): Colum
   return filters;
 }
 
+function getStringFilterValue(columnFilters: ColumnFiltersState, filterId: string): string | undefined {
+  const filter = columnFilters.find((item) => item.id === filterId);
+  if (!filter) return undefined;
+  if (typeof filter.value !== 'string') return undefined;
+  const trimmed = filter.value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function getArrayFilterValue(columnFilters: ColumnFiltersState, filterId: string): string[] | undefined {
+  const filter = columnFilters.find((item) => item.id === filterId);
+  if (!filter || !Array.isArray(filter.value)) return undefined;
+  const values = filter.value.map((value) => String(value).trim()).filter(Boolean);
+  return values.length > 0 ? values : undefined;
+}
+
 function getInitialGrouping(initialState: ServiceGridInitialState): GroupingState {
   if (initialState.groupBy === 'none') return [];
   return [initialState.groupBy];
 }
 
-function formatBoardDate(value: string | null): string {
-  if (!value) return 'Tarih Yok';
-  return formatDateDdmmyyyShortMonth(value);
-}
-
 function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
   const token = window.localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 function getTodayUtcNoon(): Date {
@@ -185,12 +205,9 @@ function getUtcWeekRange(base: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
-function isTodayActiveRow(row: ServiceGridRow): boolean {
-  return TODAY_ACTIVE_STATUS_SET.has(row.durum) || row.lokasyonGroup === 'DIS_SERVIS';
-}
-
 function isOverdueRow(row: ServiceGridRow): boolean {
-  return isDateBeforeTodayUtc(row.tarih) && !TERMINAL_STATUS_SET.has(row.durum);
+  const dueDate = row.tahminiBitisTarihi ?? row.tarih;
+  return isDateBeforeTodayUtc(dueDate) && !TERMINAL_STATUS_SET.has(row.durum);
 }
 
 function applyQueueFilter(rows: ServiceGridRow[], queueFilter: QueueFilter): ServiceGridRow[] {
@@ -203,8 +220,10 @@ function applyQueueFilter(rows: ServiceGridRow[], queueFilter: QueueFilter): Ser
       return rows.filter((row) => row.personelSayisi === 0);
     case 'UNSCHEDULED':
       return rows.filter((row) => !row.tarih);
-    case 'COMPLETED':
-      return rows.filter((row) => row.durum === 'TAMAMLANDI');
+    case 'WAITING':
+      return rows.filter(
+        (row) => row.durum === 'PARCA_BEKLIYOR' || row.durum === 'MUSTERI_ONAY_BEKLIYOR'
+      );
     case 'ALL':
     default:
       return rows;
@@ -218,7 +237,9 @@ function buildQueueCounts(rows: ServiceGridRow[]): QueueCounts {
     OVERDUE: rows.filter(isOverdueRow).length,
     UNASSIGNED: rows.filter((row) => row.personelSayisi === 0).length,
     UNSCHEDULED: rows.filter((row) => !row.tarih).length,
-    COMPLETED: rows.filter((row) => row.durum === 'TAMAMLANDI').length,
+    WAITING: rows.filter(
+      (row) => row.durum === 'PARCA_BEKLIYOR' || row.durum === 'MUSTERI_ONAY_BEKLIYOR'
+    ).length,
   };
 }
 
@@ -228,20 +249,10 @@ function applyDatePresetFilter(rows: ServiceGridRow[], preset: DatePreset): Serv
   const today = getTodayUtcNoon();
 
   if (preset === 'BUGUN') {
-    const filtered = rows.filter((row) => {
+    return rows.filter((row) => {
       const rowDate = parseDateOnlyToUtcDate(row.tarih);
-      const isToday = rowDate ? isSameUtcDay(rowDate, today) : false;
-      return isToday || isTodayActiveRow(row);
+      return rowDate ? isSameUtcDay(rowDate, today) : false;
     });
-
-    return filtered
-      .map((row, index) => ({
-        row,
-        index,
-        priority: !row.tarih && isTodayActiveRow(row) ? 0 : 1,
-      }))
-      .sort((left, right) => left.priority - right.priority || left.index - right.index)
-      .map((item) => item.row);
   }
 
   const targetDate = preset === 'YARIN' ? addUtcDays(today, 1) : null;
@@ -278,13 +289,97 @@ function mapServiceToScoringData(service: ServiceDetail): ScoringServiceData {
   };
 }
 
+function getSortOptionFromSorting(sorting: SortingState): ToolbarSortOption {
+  const firstSort = sorting[0];
+  if (!firstSort) return 'DATE_DESC';
+
+  if (firstSort.id === 'tarih') return firstSort.desc ? 'DATE_DESC' : 'DATE_ASC';
+  if (firstSort.id === 'saat') return firstSort.desc ? 'TIME_DESC' : 'TIME_ASC';
+  if (firstSort.id === 'tekneAdi') return firstSort.desc ? 'BOAT_DESC' : 'BOAT_ASC';
+  if (firstSort.id === 'adres') return firstSort.desc ? 'ADDRESS_DESC' : 'ADDRESS_ASC';
+  if (firstSort.id === 'servisAciklamasi') return firstSort.desc ? 'DESCRIPTION_DESC' : 'DESCRIPTION_ASC';
+  if (firstSort.id === 'durum') return firstSort.desc ? 'STATUS_DESC' : 'STATUS_ASC';
+  if (firstSort.id === 'irtibatKisi') return firstSort.desc ? 'CONTACT_DESC' : 'CONTACT_ASC';
+  if (firstSort.id === 'telefon') return firstSort.desc ? 'PHONE_DESC' : 'PHONE_ASC';
+
+  return 'DATE_DESC';
+}
+
+function getSortingForOption(option: ToolbarSortOption): SortingState {
+  switch (option) {
+    case 'DATE_ASC':
+      return [{ id: 'tarih', desc: false }];
+    case 'DATE_DESC':
+      return [{ id: 'tarih', desc: true }];
+    case 'TIME_ASC':
+      return [{ id: 'saat', desc: false }];
+    case 'TIME_DESC':
+      return [{ id: 'saat', desc: true }];
+    case 'BOAT_ASC':
+      return [{ id: 'tekneAdi', desc: false }];
+    case 'BOAT_DESC':
+      return [{ id: 'tekneAdi', desc: true }];
+    case 'ADDRESS_ASC':
+      return [{ id: 'adres', desc: false }];
+    case 'ADDRESS_DESC':
+      return [{ id: 'adres', desc: true }];
+    case 'DESCRIPTION_ASC':
+      return [{ id: 'servisAciklamasi', desc: false }];
+    case 'DESCRIPTION_DESC':
+      return [{ id: 'servisAciklamasi', desc: true }];
+    case 'STATUS_ASC':
+      return [{ id: 'durum', desc: false }];
+    case 'STATUS_DESC':
+      return [{ id: 'durum', desc: true }];
+    case 'CONTACT_ASC':
+      return [{ id: 'irtibatKisi', desc: false }];
+    case 'CONTACT_DESC':
+      return [{ id: 'irtibatKisi', desc: true }];
+    case 'PHONE_ASC':
+      return [{ id: 'telefon', desc: false }];
+    case 'PHONE_DESC':
+      return [{ id: 'telefon', desc: true }];
+    default:
+      return [{ id: 'tarih', desc: true }];
+  }
+}
+
+function buildWhatsappMessage(rows: ServiceGridRow[], title: string, subtitle: string): string {
+  const header = [title, subtitle, `Toplam is: ${rows.length}`, ''];
+
+  const lines = rows.map((row, index) => {
+    const statusLabel = getStatusConfig(row.durum).label;
+    const addressText = row.adres || '-';
+    const contactText = row.irtibatKisi?.trim() ? row.irtibatKisi.trim() : 'Belirtilmedi';
+    const phoneText = row.telefon?.trim() ? row.telefon.trim() : 'Belirtilmedi';
+    const timeText = row.saat || '--:--';
+    const jobText = row.servisAciklamasi?.trim() ? row.servisAciklamasi.trim() : '-';
+
+    return [
+      `${index + 1}) ${timeText} - ${row.tekneAdi}`,
+      `Adres: ${addressText}`,
+      `Durum: ${statusLabel}`,
+      `Irtibat: ${contactText}`,
+      `Telefon: ${phoneText}`,
+      `Is: ${jobText}`,
+      '',
+    ].join('\n');
+  });
+
+  return [...header, ...lines].join('\n').trim();
+}
+
 export function DataTable({ columns, data, initialState }: DataTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMountedRef = React.useRef(false);
+  const storageHydratedRef = React.useRef(false);
+  const syncReadyRef = React.useRef(false);
   const [rows, setRows] = React.useState<ServiceGridRow[]>(() => data);
   const [statusUpdatingIds, setStatusUpdatingIds] = React.useState<Set<string>>(() => new Set());
   const [datePreset, setDatePreset] = React.useState<DatePreset>('ALL');
-  const [queueFilter, setQueueFilter] = React.useState<QueueFilter>('ALL');
+  const [queueFilter, setQueueFilter] = React.useState<QueueFilter>(initialState.queueFilter);
   const [viewPreset, setViewPreset] = React.useState<ServiceViewPreset>('DEFAULT');
   const [showScoring, setShowScoring] = React.useState(false);
   const [scoringService, setScoringService] = React.useState<ScoringServiceData | null>(null);
@@ -293,11 +388,11 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(() =>
     buildInitialColumnFilters(initialState)
   );
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({ tarihKey: false });
-  const [grouping, setGrouping] = React.useState<GroupingState>(() =>
-    initialState.viewMode === 'board' ? [] : getInitialGrouping(initialState)
-  );
-  const [viewMode, setViewMode] = React.useState<DataGridViewMode>(initialState.viewMode);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    tarihKey: false,
+    lokasyonGroup: false,
+  });
+  const [grouping, setGrouping] = React.useState<GroupingState>(() => getInitialGrouping(initialState));
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
   const setMultiFilterValue = React.useCallback((filterId: string, value: unknown) => {
@@ -318,6 +413,20 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
     });
   }, []);
 
+  const applyPersistedFilterState = React.useCallback(
+    (state: ServisFilterState) => {
+      setMultiFilterValue('tekneAdi', state.tekneAdi ?? undefined);
+      setMultiFilterValue('durum', state.durum && state.durum.length > 0 ? state.durum : undefined);
+      setMultiFilterValue('lokasyonGroup', state.konum && state.konum.length > 0 ? state.konum : undefined);
+      setMultiFilterValue('tarihKey', state.tarih && state.tarih.length > 0 ? state.tarih : undefined);
+      setQueueFilter(state.queue ?? 'ALL');
+      setGrouping(state.groupBy && state.groupBy !== 'none' ? [state.groupBy] : []);
+      setDatePreset(state.datePreset ?? 'ALL');
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    },
+    [setMultiFilterValue]
+  );
+
   const applyViewPreset = React.useCallback(
     (preset: ServiceViewPreset) => {
       setViewPreset(preset);
@@ -325,7 +434,6 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
 
       switch (preset) {
         case 'TODAY_ACTIVE':
-          setViewMode('list');
           setGrouping([]);
           setDatePreset('BUGUN');
           setQueueFilter('ACTIVE');
@@ -334,7 +442,6 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
           setMultiFilterValue('tarihKey', undefined);
           break;
         case 'OVERDUE':
-          setViewMode('list');
           setGrouping([]);
           setDatePreset('ALL');
           setQueueFilter('OVERDUE');
@@ -343,7 +450,6 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
           setMultiFilterValue('tarihKey', undefined);
           break;
         case 'UNASSIGNED':
-          setViewMode('list');
           setGrouping([]);
           setDatePreset('ALL');
           setQueueFilter('UNASSIGNED');
@@ -351,27 +457,24 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
           setMultiFilterValue('lokasyonGroup', undefined);
           setMultiFilterValue('tarihKey', undefined);
           break;
-        case 'COMPLETED':
-          setViewMode('list');
+        case 'UNSCHEDULED':
           setGrouping([]);
           setDatePreset('ALL');
-          setQueueFilter('COMPLETED');
-          setMultiFilterValue('durum', ['TAMAMLANDI']);
+          setQueueFilter('UNSCHEDULED');
+          setMultiFilterValue('durum', undefined);
           setMultiFilterValue('lokasyonGroup', undefined);
           setMultiFilterValue('tarihKey', undefined);
           break;
-        case 'FIELD_BOARD':
-          setViewMode('board');
+        case 'WAITING':
           setGrouping([]);
           setDatePreset('ALL');
-          setQueueFilter('ACTIVE');
-          setMultiFilterValue('durum', undefined);
-          setMultiFilterValue('lokasyonGroup', ['DIS_SERVIS']);
+          setQueueFilter('WAITING');
+          setMultiFilterValue('durum', ['PARCA_BEKLIYOR', 'MUSTERI_ONAY_BEKLIYOR']);
+          setMultiFilterValue('lokasyonGroup', undefined);
           setMultiFilterValue('tarihKey', undefined);
           break;
         case 'DEFAULT':
         default:
-          setViewMode('list');
           setGrouping([]);
           setDatePreset('ALL');
           setQueueFilter('ALL');
@@ -432,10 +535,56 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
   }, []);
 
   React.useEffect(() => {
+    if (!isMountedRef.current) return;
+    if (storageHydratedRef.current) return;
+
+    storageHydratedRef.current = true;
+    if (hasServisFilterParams(searchParams)) return;
+
+    const kayitliFiltre = loadServisFilterStateFromStorage();
+    if (!kayitliFiltre) return;
+
+    applyPersistedFilterState(kayitliFiltre);
+  }, [applyPersistedFilterState, searchParams]);
+
+  React.useEffect(() => {
     if (isMountedRef.current) {
       setRows(data);
     }
   }, [data]);
+
+  const aktifFiltreDurumu = React.useMemo<ServisFilterState>(
+    () =>
+      normalizeServisFilterState({
+        tekneAdi: getStringFilterValue(columnFilters, 'tekneAdi'),
+        durum: getArrayFilterValue(columnFilters, 'durum'),
+        konum: getArrayFilterValue(columnFilters, 'lokasyonGroup'),
+        tarih: getArrayFilterValue(columnFilters, 'tarihKey'),
+        queue: queueFilter,
+        groupBy:
+          grouping[0] === 'tekneAdi' || grouping[0] === 'lokasyonGroup' ? grouping[0] : 'none',
+        datePreset,
+      }),
+    [columnFilters, datePreset, grouping, queueFilter]
+  );
+
+  React.useEffect(() => {
+    if (!isMountedRef.current) return;
+    if (!syncReadyRef.current) {
+      syncReadyRef.current = true;
+      return;
+    }
+
+    saveServisFilterStateToStorage(aktifFiltreDurumu);
+
+    const hedefUrl = buildServisUrlFromFilterState(pathname, aktifFiltreDurumu);
+    const mevcutQuery = searchParams.toString();
+    const mevcutUrl = mevcutQuery ? `${pathname}?${mevcutQuery}` : pathname;
+
+    if (hedefUrl !== mevcutUrl) {
+      router.replace(hedefUrl, { scroll: false });
+    }
+  }, [aktifFiltreDurumu, pathname, router, searchParams]);
 
   const queueCounts = React.useMemo(() => buildQueueCounts(rows), [rows]);
   const queueFilteredRows = React.useMemo(() => applyQueueFilter(rows, queueFilter), [queueFilter, rows]);
@@ -466,7 +615,7 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
 
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error(payload?.error || 'Servis detaylari alinamadi');
+      throw new Error(payload?.error || 'Servis detayları alınamadı');
     }
 
     return payload as ServiceDetail;
@@ -500,10 +649,22 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
       }
 
       if (!isMountedRef.current) return;
-      setRows((prev) => prev.map((item) => (item.id === servisId ? { ...item, durum: 'TAMAMLANDI' } : item)));
+      const completedDate = new Date().toISOString().slice(0, 10);
+      setRows((prev) =>
+        prev.map((item) =>
+          item.id === servisId
+            ? {
+                ...item,
+                durum: 'TAMAMLANDI',
+                tarih: completedDate,
+                tahminiBitisTarihi: completedDate,
+              }
+            : item
+        )
+      );
       setShowScoring(false);
       setScoringService(null);
-      toast.success('Puanlama kaydedildi, servis tamamlandi.');
+      toast.success('Puanlama kaydedildi, servis tamamlandı.');
       router.refresh();
     },
     [router]
@@ -515,7 +676,7 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
       if (!isMountedRef.current) return;
       setScoringService(mapServiceToScoringData(detail));
       setShowScoring(true);
-      toast.info('Tamamlandi durumuna gecmek icin puanlama gerekli.');
+      toast.info('Tamamlandı durumuna geçmek için puanlama gerekli.');
     },
     [fetchServiceDetail]
   );
@@ -530,7 +691,7 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
         try {
           await openScoringModalForCompletion(serviceId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Puanlama ekrani acilamadi';
+          const message = error instanceof Error ? error.message : 'Puanlama ekranı açılamadı';
           toast.error(message);
         }
         return;
@@ -574,10 +735,10 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
 
         const payload = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error(payload?.error || 'Durum guncellenemedi');
+          throw new Error(payload?.error || 'Durum güncellenemedi');
         }
 
-        toast.success('Servis durumu guncellendi');
+        toast.success('Servis durumu güncellendi');
         router.refresh();
       } catch (error) {
         if (isMountedRef.current) {
@@ -585,7 +746,7 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
             prev.map((item) => (item.id === serviceId ? { ...item, durum: previousStatus } : item))
           );
         }
-        const message = error instanceof Error ? error.message : 'Durum guncellemesi basarisiz';
+        const message = error instanceof Error ? error.message : 'Durum güncellemesi başarısız';
         toast.error(message);
       } finally {
         if (isMountedRef.current) {
@@ -600,13 +761,37 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
     [openScoringModalForCompletion, router, rows]
   );
 
+  const handleCopyRowWhatsapp = React.useCallback(async (service: ServiceGridRow) => {
+    const dateText = service.tarih ? formatDateDdmmyyyShortMonth(service.tarih) : 'Tarihsiz';
+    const statusLabel = getStatusConfig(service.durum).label;
+    const lineMessage = [
+      'TEKNIK EKIP - HIZLI SATIR',
+      `Tarih: ${dateText}`,
+      '',
+      `${service.saat || '--:--'} | ${service.tekneAdi}`,
+      `Adres: ${service.adres || '-'}`,
+      `Servis: ${service.servisAciklamasi || '-'}`,
+      `Durum: ${statusLabel}`,
+      `Irtibat: ${service.irtibatKisi?.trim() || 'Belirtilmedi'}`,
+      `Telefon: ${service.telefon?.trim() || 'Belirtilmedi'}`,
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(lineMessage);
+      toast.success('Servis satiri WhatsApp formatiyla kopyalandi.');
+    } catch {
+      toast.error('Satir metni panoya kopyalanamadi.');
+    }
+  }, []);
+
   const tableMeta = React.useMemo<ServiceTableMeta>(
     () => ({
       onServiceStatusChange,
       isServiceStatusUpdating,
       onServiceDeleted,
+      onCopyRowWhatsapp: handleCopyRowWhatsapp,
     }),
-    [onServiceDeleted, onServiceStatusChange, isServiceStatusUpdating]
+    [onServiceDeleted, onServiceStatusChange, isServiceStatusUpdating, handleCopyRowWhatsapp]
   );
 
   const groupBy: DataGridGroupBy =
@@ -645,199 +830,287 @@ export function DataTable({ columns, data, initialState }: DataTableProps) {
     .getSortedRowModel()
     .rows.filter((row) => !row.getIsGrouped())
     .map((row) => row.original);
+  const mobileRows = table
+    .getRowModel()
+    .rows.filter((row) => !row.getIsGrouped())
+    .map((row) => row.original);
 
-  const boardColumns = BOARD_STATUS_ORDER.map((status) => {
-    const items = sortedRows.filter((row) => row.durum === status);
-    return {
-      status,
-      items,
-      config: getStatusConfig(status),
-    };
-  }).filter((column) => column.items.length > 0);
+  const sortOption = React.useMemo(() => getSortOptionFromSorting(sorting), [sorting]);
+  const tomorrowDateLabel = React.useMemo(() => {
+    const tomorrow = addUtcDays(getTodayUtcNoon(), 1).toISOString().slice(0, 10);
+    return formatDateDdmmyyyShortMonth(tomorrow);
+  }, []);
+
+  const handleSortOptionChange = React.useCallback((next: ToolbarSortOption) => {
+    setSorting(getSortingForOption(next));
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, []);
+
+  const handleExportWhatsapp = React.useCallback(async (preset: DatePreset) => {
+    const allowedStatuses = new Set(['RANDEVU_VERILDI', 'DEVAM_EDIYOR']);
+    const scopedRows = applyDatePresetFilter(rows, preset).filter((row) => allowedStatuses.has(row.durum));
+    if (scopedRows.length === 0) {
+      toast.error('Secilen kapsamda paylasilacak teknik ekip servisi bulunamadi.');
+      return;
+    }
+
+    const today = getTodayUtcNoon();
+    const weekRange = getUtcWeekRange(today);
+    const title =
+      preset === 'BUGUN' ? 'BUGUN TEKNIK EKIP SERVIS PLANI' :
+      preset === 'YARIN' ? 'YARIN TEKNIK EKIP SERVIS PLANI' :
+      'BU HAFTA TEKNIK EKIP SERVIS PLANI';
+    const subtitle =
+      preset === 'BUGUN'
+        ? `Tarih: ${formatDateDdmmyyyShortMonth(today.toISOString().slice(0, 10))}`
+        : preset === 'YARIN'
+          ? `Tarih: ${formatDateDdmmyyyShortMonth(addUtcDays(today, 1).toISOString().slice(0, 10))}`
+          : `Aralik: ${formatDateDdmmyyyShortMonth(weekRange.start.toISOString().slice(0, 10))} - ${formatDateDdmmyyyShortMonth(weekRange.end.toISOString().slice(0, 10))}`;
+
+    const message = buildWhatsappMessage(scopedRows, title, subtitle);
+
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success('Teknik ekip WhatsApp metni panoya kopyalandi.');
+    } catch {
+      toast.error('Mesaj panoya kopyalanamadi.');
+    }
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  }, [rows]);
 
   return (
     <div className="space-y-4">
-      <DatePresetFilter
-        value={datePreset}
-        onChange={(next) => {
-          setDatePreset(next);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-      />
-
-      <DataTableToolbar
-        table={table}
-        viewMode={viewMode}
-        onViewModeChange={(next) => {
-          setViewMode(next);
-          if (next === 'board') setGrouping([]);
-        }}
-        groupBy={groupBy}
-        onGroupByChange={(next) => {
-          setGrouping(next === 'none' ? [] : [next]);
-        }}
-        queueFilter={queueFilter}
-        onQueueFilterChange={(next) => {
-          setQueueFilter(next);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-        queueCounts={queueCounts}
-        viewPreset={viewPreset}
-        onViewPresetChange={applyViewPreset}
-        isDatePresetActive={datePreset !== 'ALL'}
-        onClearDatePreset={() => setDatePreset('ALL')}
-      />
-
-      {viewMode === 'board' ? (
-        <div className="overflow-x-auto pb-2">
-          <div className="flex min-w-[1080px] gap-3">
-            {boardColumns.map((column) => (
-              <div
-                key={column.status}
-                className="w-[280px] shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/70"
-              >
-                <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 p-3">
-                  <Badge className={`${column.config.bgColor} ${column.config.color} border-0`}>
-                    {column.config.label}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{column.items.length}</span>
-                </div>
-                <div className="max-h-[68vh] space-y-2 overflow-y-auto p-3">
-                  {column.items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => router.push(`/servisler/${item.id}/duzenle`)}
-                      className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)]/40 p-3 text-left transition hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-surface)]/80"
-                    >
-                      <p className="truncate text-sm font-semibold text-foreground">{item.tekneAdi}</p>
-                      <p className="truncate text-xs text-muted-foreground">{item.yer || item.adres}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {formatBoardDate(item.tarih)} - {item.saat || '--:--'}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {boardColumns.length === 0 && (
-              <div className="w-full rounded-xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm text-muted-foreground">
-                Filtrelere uygun kayit bulunamadi.
-              </div>
-            )}
-          </div>
+      <div className="sticky top-2 z-20 space-y-3 rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-bg)]/90 p-3 backdrop-blur">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <DatePresetFilter
+            value={datePreset}
+            onChange={(next) => {
+              setDatePreset(next);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full lg:w-auto"
+            onClick={() => void handleExportWhatsapp('YARIN')}
+            disabled={sortedRows.length === 0}
+          >
+            <MessageCircleCode className="mr-2 h-4 w-4" />
+            Yarinin planini WhatsAppa aktar ({tomorrowDateLabel})
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full lg:w-auto"
+            onClick={() => void handleExportWhatsapp('BUGUN')}
+            disabled={sortedRows.length === 0}
+          >
+            <MessageCircleCode className="mr-2 h-4 w-4" />
+            Bugunun planini WhatsAppa aktar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full lg:w-auto"
+            onClick={() => void handleExportWhatsapp('BU_HAFTA')}
+            disabled={sortedRows.length === 0}
+          >
+            <MessageCircleCode className="mr-2 h-4 w-4" />
+            Bu haftayi WhatsAppa aktar
+          </Button>
         </div>
-      ) : (
-        <>
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
+
+        <DataTableToolbar
+          table={table}
+          groupBy={groupBy}
+          onGroupByChange={(next) => {
+            setGrouping(next === 'none' ? [] : [next]);
+          }}
+          queueFilter={queueFilter}
+          onQueueFilterChange={(next) => {
+            setQueueFilter(next);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+          queueCounts={queueCounts}
+          viewPreset={viewPreset}
+          onViewPresetChange={applyViewPreset}
+          sortOption={sortOption}
+          onSortOptionChange={handleSortOptionChange}
+          isDatePresetActive={datePreset !== 'ALL'}
+          onClearDatePreset={() => setDatePreset('ALL')}
+        />
+
+        <SavedFilters
+          aktifFiltreDurumu={aktifFiltreDurumu}
+          onFiltreYukle={applyPersistedFilterState}
+        />
+      </div>
+
+      <div className="space-y-3 lg:hidden">
+        {mobileRows.length > 0 ? (
+          mobileRows.map((service) => (
+            <div
+              key={service.id}
+              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/70 p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <button
+                  type="button"
+                  className="text-left"
+                  onClick={() => router.push(`/servisler/${service.id}/duzenle`)}
+                >
+                  <p className="text-sm font-semibold">{service.tekneAdi}</p>
+                  <p className="text-xs text-muted-foreground">{service.servisAciklamasi}</p>
+                </button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-11 w-11 shrink-0"
+                  onClick={() => void handleCopyRowWhatsapp(service)}
+                >
+                  <MessageCircleCode className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  {service.tarih ? formatDateDdmmyyyShortMonth(service.tarih) : 'Tarihsiz'} {service.saat || '--:--'}
+                </p>
+                <p className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {service.adres || '-'}
+                </p>
+                <p className="flex items-center gap-2">
+                  <PhoneCall className="h-3.5 w-3.5" />
+                  {service.telefon || 'Belirtilmedi'}
+                </p>
+                <p className="text-[11px]">
+                  Durum: <span className="font-medium text-foreground">{getStatusConfig(service.durum).label}</span>
+                </p>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 p-5 text-center text-sm text-muted-foreground">
+            Filtrelere uygun kayıt bulunamadı.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 lg:block">
+        <Table data-testid="servis-list-table">
+          <TableHeader className="sticky top-0 z-10 bg-[var(--color-bg)]/95 backdrop-blur">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="sticky top-0 bg-[var(--color-bg)]/95">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length > 0 ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (!row.getIsGrouped() && row.original.id) {
-                          router.push(`/servisler/${row.original.id}/duzenle`);
-                        }
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {cell.getIsGrouped() ? (
-                            <button
-                              type="button"
-                              onClick={row.getToggleExpandedHandler()}
-                              className="inline-flex items-center gap-2 text-sm font-medium"
-                            >
-                              <FolderTree className="h-4 w-4 text-muted-foreground" />
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              <span className="text-xs text-muted-foreground">({row.subRows.length})</span>
-                            </button>
-                          ) : cell.getIsAggregated() ? (
-                            flexRender(
-                              cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
-                              cell.getContext()
-                            )
-                          ) : cell.getIsPlaceholder() ? null : (
-                            flexRender(cell.column.columnDef.cell, cell.getContext())
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-28 text-center text-muted-foreground">
-                      Filtrelere uygun kayit bulunamadi.
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody data-testid="servis-table-body">
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-testid={`servis-row-${row.original.id}`}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    if (!row.getIsGrouped() && row.original.id) {
+                      router.push(`/servisler/${row.original.id}/duzenle`);
+                    }
+                  }}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {cell.getIsGrouped() ? (
+                        <button
+                          type="button"
+                          onClick={row.getToggleExpandedHandler()}
+                          className="inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                          <FolderTree className="h-4 w-4 text-muted-foreground" />
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <span className="text-xs text-muted-foreground">({row.subRows.length})</span>
+                        </button>
+                      ) : cell.getIsAggregated() ? (
+                        flexRender(
+                          cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
+                          cell.getContext()
+                        )
+                      ) : cell.getIsPlaceholder() ? null : (
+                        flexRender(cell.column.columnDef.cell, cell.getContext())
+                      )}
                     </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-[var(--color-border)]/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Layers className="h-4 w-4" />
-              <span>
-                Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select
-                value={String(table.getState().pagination.pageSize)}
-                onValueChange={(value) => table.setPageSize(Number(value))}
-              >
-                <SelectTrigger className="h-8 w-[130px]">
-                  <SelectValue placeholder="Sayfa Boyutu" />
-                </SelectTrigger>
-                <SelectContent className="border-slate-800 bg-slate-900 text-slate-100">
-                  {[10, 25, 50, 100].map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size} / sayfa
-                    </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-28 text-center text-muted-foreground">
+                  Filtrelere uygun kayıt bulunamadı.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" /> Onceki
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Sonraki <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+      <div className="flex flex-col gap-3 border-t border-[var(--color-border)]/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Layers className="h-4 w-4" />
+          <span>
+            Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(table.getState().pagination.pageSize)}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger className="h-11 w-[130px]">
+              <SelectValue placeholder="Sayfa Boyutu" />
+            </SelectTrigger>
+            <SelectContent className="border-border bg-popover text-popover-foreground">
+              {[10, 25, 50, 100].map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size} / sayfa
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-11 px-4"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" /> Önceki
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-11 px-4"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Sonraki <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       <ServisKapanisModal
         acik={showScoring}

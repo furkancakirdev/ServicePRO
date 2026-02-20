@@ -1,7 +1,8 @@
-// Role-Based Access Control - Permission Definitions
-// ServicePro ERP - Marlin Yatçılık
+﻿// Role-Based Access Control - Permission Definitions
+// ServicePro ERP - Marlin Yatcilik
 
 import { UserRole } from '@prisma/client';
+import { systemSettingGetir } from '@/lib/config/dynamic-settings';
 
 /**
  * All available permissions in the system
@@ -117,7 +118,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'users.create': 'Kullanıcı Oluştur',
   'users.read': 'Kullanıcıları Görüntüle',
   'users.update': 'Kullanıcı Düzenle',
-  'users.delete': 'Kullanıcı Sil',
+  'users.delete': 'Kullanici Sil',
   'servis.create': 'Servis Oluştur',
   'servis.read': 'Servisleri Görüntüle',
   'servis.update': 'Servis Düzenle',
@@ -134,3 +135,48 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'puanlama.create': 'Puanlama Yap',
   'puanlama.update': 'Puan Düzenle',
 };
+
+const TUM_IZINLER = new Set<Permission>(Object.keys(PERMISSION_LABELS) as Permission[]);
+
+function izinListesiniNormalizeEt(hamListe: unknown[]): Permission[] {
+  const filtreliListe = hamListe
+    .map((deger) => String(deger))
+    .filter((deger): deger is Permission => TUM_IZINLER.has(deger as Permission));
+
+  return Array.from(new Set(filtreliListe));
+}
+
+/**
+ * Dinamik izin desteği.
+ * Sistem ayarı anahtarı: rbac.role.ADMIN / rbac.role.YETKILI
+ */
+export async function getPermissionsForRoleDynamic(role: UserRole): Promise<Permission[]> {
+  const varsayilanIzinler = getPermissionsForRole(role);
+  const ayarAnahtari = `rbac.role.${role}`;
+  const ayarSonucu = await systemSettingGetir(ayarAnahtari, JSON.stringify(varsayilanIzinler));
+
+  if (!ayarSonucu) {
+    return varsayilanIzinler;
+  }
+
+  try {
+    const parseEdilen = JSON.parse(ayarSonucu.value) as unknown;
+    if (!Array.isArray(parseEdilen)) {
+      return varsayilanIzinler;
+    }
+
+    const normalizeIzinler = izinListesiniNormalizeEt(parseEdilen);
+    return normalizeIzinler.length > 0 ? normalizeIzinler : varsayilanIzinler;
+  } catch {
+    return varsayilanIzinler;
+  }
+}
+
+export async function roleHasPermissionDynamic(
+  role: UserRole,
+  permission: Permission
+): Promise<boolean> {
+  const izinler = await getPermissionsForRoleDynamic(role);
+  return izinler.includes(permission);
+}
+

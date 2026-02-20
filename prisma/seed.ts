@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('ğŸŒ± Seeding database...');
+  console.log('🌱 Seeding database...');
 
   // Admin user
   const adminPassword = await bcrypt.hash('admin123', 12);
@@ -19,15 +19,15 @@ async function main() {
       aktif: true,
     },
   });
-  console.log('âœ… Admin user created:', admin.email);
+  console.log('✅ Admin user created:', admin.email);
 
-  // Yetkili (KoordinatÃ¶r) kullanÄ±cÄ±lar - 4 WHITELISTED YETKILI
+  // Yetkili (Koordinatör) kullanıcılar - 4 WHITELISTED YETKILI
   const yetkiliPassword = await bcrypt.hash('yetkili123', 12);
   const yetkililer = [
-    { email: 'furkan.cakir@marlin.com.tr', ad: 'Furkan Ã‡AKIR' },
+    { email: 'furkan.cakir@marlin.com.tr', ad: 'Furkan ÇAKIR' },
     { email: 'mehmet@marlin.com.tr', ad: 'Mehmet KARA' },
-    { email: 'tugrul.semiz@marlin.com.tr', ad: 'TuÄŸrul SEMÄ°Z' },
-    { email: 'burak@marlin.com.tr', ad: 'Burak Ã‡ETÄ°NEL' },
+    { email: 'tugrul.semiz@marlin.com.tr', ad: 'Tuğrul SEMİZ' },
+    { email: 'burak@marlin.com.tr', ad: 'Burak ÇETİNEL' },
   ];
 
   for (const yetkili of yetkililer) {
@@ -40,17 +40,17 @@ async function main() {
         ad: yetkili.ad,
         role: 'YETKILI',
         aktif: true,
-        whitelistedYetkili: true, // YENÄ°: 4 yetkili whitelist kontrolÃ¼
+        whitelistedYetkili: true, // YENİ: 4 yetkili whitelist kontrolü
       },
     });
   }
-  console.log('âœ… 4 Whitelisted yetkili kullanÄ±cÄ±lar oluÅŸturuldu');
+  console.log('✅ 4 Whitelisted yetkili kullanıcılar oluşturuldu');
 
-  // Zorluk KatsayÄ±larÄ±
+  // Zorluk Katsayıları
   const katsayilar = [
     { isTuru: 'PAKET' as const, label: 'Rutin-Basit Servis', carpan: 1.0 },
-    { isTuru: 'ARIZA' as const, label: 'ArÄ±za Ã‡Ã¶zÃ¼m', carpan: 1.2 },
-    { isTuru: 'PROJE' as const, label: 'Proje-BÃ¼yÃ¼k Servis', carpan: 1.5 },
+    { isTuru: 'ARIZA' as const, label: 'Arıza Çözüm', carpan: 1.2 },
+    { isTuru: 'PROJE' as const, label: 'Proje-Büyük Servis', carpan: 1.5 },
   ];
 
   for (const katsayi of katsayilar) {
@@ -60,7 +60,7 @@ async function main() {
       create: katsayi,
     });
   }
-  console.log('âœ… Zorluk katsayÄ±larÄ± oluÅŸturuldu');
+  console.log('✅ Zorluk katsayıları oluşturuldu');
 
   // Rozet Kriterleri
   const rozetKriterleri = [
@@ -76,16 +76,16 @@ async function main() {
       create: kriter,
     });
   }
-  console.log('âœ… Rozet kriterleri oluÅŸturuldu');
+  console.log('✅ Rozet kriterleri oluşturuldu');
 
-  // Puanlama SorularÄ± - USTA
+  // Puanlama Soruları - USTA
   const ustaSorulari = [
-    { key: 'uniformaVeIsg', label: 'Ãœniforma ve Ä°SG Uyumu', aciklama: 'Personel iÅŸ gÃ¼venliÄŸi ekipmanlarÄ±nÄ± (KKD) kullandÄ± mÄ±? Ãœniforma temiz ve dÃ¼zgÃ¼n mÃ¼ydÃ¼?', sira: 1 },
-    { key: 'musteriIletisimi', label: 'MÃ¼ÅŸteri Ä°letiÅŸim Kalitesi', aciklama: 'MÃ¼ÅŸterilerle profesyonel ve saygÄ±lÄ± iletiÅŸim kurdu mu? Åikayet aldÄ± mÄ±?', sira: 2 },
-    { key: 'planlamaKoordinasyon', label: 'Planlama ve Koordinasyon', aciklama: 'Ä°ÅŸ planÄ±na uydu mu? DeÄŸiÅŸiklikleri zamanÄ±nda bildirdi mi?', sira: 3 },
-    { key: 'teknikTespit', label: 'Teknik Tespit YeteneÄŸi', aciklama: 'ArÄ±zalarÄ± ve ek iÅŸ ihtiyaÃ§larÄ±nÄ± doÄŸru tespit edebildi mi?', sira: 4 },
-    { key: 'raporDokumantasyon', label: 'Rapor ve DokÃ¼mantasyon', aciklama: 'Ä°ÅŸ raporlarÄ±nÄ± eksiksiz ve zamanÄ±nda teslim etti mi?', sira: 5 },
-    { key: 'genelLiderlik', label: 'Genel Liderlik', aciklama: 'Ekibini yÃ¶netti mi? Ã‡Ä±raklara rehberlik etti mi? Sorumluluk aldÄ± mÄ±?', sira: 6 },
+    { key: 'uniformaVeIsg', label: 'Üniforma ve İSG Uyumu', aciklama: 'Personel iş güvenliği ekipmanlarını (KKD) kullandı mı? Üniforma temiz ve düzgün müydü?', sira: 1 },
+    { key: 'musteriIletisimi', label: 'Müşteri İletişim Kalitesi', aciklama: 'Müşterilerle profesyonel ve saygılı iletişim kurdu mu? Şikayet aldı mı?', sira: 2 },
+    { key: 'planlamaKoordinasyon', label: 'Planlama ve Koordinasyon', aciklama: 'İş planına uydu mu? Değişiklikleri zamanında bildirdi mi?', sira: 3 },
+    { key: 'teknikTespit', label: 'Teknik Tespit Yeteneği', aciklama: 'Arızaları ve ek iş ihtiyaçlarını doğru tespit edebildi mi?', sira: 4 },
+    { key: 'raporDokumantasyon', label: 'Rapor ve Dokümantasyon', aciklama: 'İş raporlarını eksiksiz ve zamanında teslim etti mi?', sira: 5 },
+    { key: 'genelLiderlik', label: 'Genel Liderlik', aciklama: 'Ekibini yönetti mi? Çıraklara rehberlik etti mi? Sorumluluk aldı mı?', sira: 6 },
   ];
 
   for (const soru of ustaSorulari) {
@@ -96,12 +96,12 @@ async function main() {
     });
   }
 
-  // Puanlama SorularÄ± - CIRAK
+  // Puanlama Soruları - CIRAK
   const cirakSorulari = [
-    { key: 'cirak_uniformaVeIsg', label: 'Ãœniforma ve Ä°SG Uyumu', aciklama: 'Personel iÅŸ gÃ¼venliÄŸi ekipmanlarÄ±nÄ± (KKD) kullandÄ± mÄ±? Ãœniforma temiz ve dÃ¼zgÃ¼n mÃ¼ydÃ¼?', sira: 1 },
-    { key: 'ekipIciDavranis', label: 'Ekip Ä°Ã§i DavranÄ±ÅŸ', aciklama: 'Ekip arkadaÅŸlarÄ±yla uyumlu Ã§alÄ±ÅŸtÄ± mÄ±? Ã‡atÄ±ÅŸma veya tutum problemi var mÄ±ydÄ±?', sira: 2 },
-    { key: 'destekKalitesi', label: 'Ustalara Destek Kalitesi', aciklama: 'Ustalara verilen gÃ¶revlerde yardÄ±mcÄ± oldu mu? Talimatlara uydu mu?', sira: 3 },
-    { key: 'ogrenmeGelisim', label: 'Ã–ÄŸrenme Ä°steÄŸi ve GeliÅŸim', aciklama: 'Bu ay yeni bir ÅŸey Ã¶ÄŸrendi mi? Soru sordu mu? Ä°lerleme kaydetti mi?', sira: 4 },
+    { key: 'cirak_uniformaVeIsg', label: 'Üniforma ve İSG Uyumu', aciklama: 'Personel iş güvenliği ekipmanlarını (KKD) kullandı mı? Üniforma temiz ve düzgün müydü?', sira: 1 },
+    { key: 'ekipIciDavranis', label: 'Ekip İçi Davranış', aciklama: 'Ekip arkadaşlarıyla uyumlu çalıştı mı? Çatışma veya tutum problemi var mıydı?', sira: 2 },
+    { key: 'destekKalitesi', label: 'Ustalara Destek Kalitesi', aciklama: 'Ustalara verilen görevlerde yardımcı oldu mu? Talimatlara uydu mu?', sira: 3 },
+    { key: 'ogrenmeGelisim', label: 'Öğrenme İsteği ve Gelişim', aciklama: 'Bu ay yeni bir şey öğrendi mi? Soru sordu mu? İlerleme kaydetti mi?', sira: 4 },
   ];
 
   for (const soru of cirakSorulari) {
@@ -112,12 +112,12 @@ async function main() {
     });
   }
 
-  // YENÄ°: Rapor Kontrol SorularÄ± - Servis kapanÄ±ÅŸÄ±nda kullanÄ±lÄ±r
+  // YENİ: Rapor Kontrol Soruları - Servis kapanışında kullanılır
   const raporKontrolSorulari = [
-    { key: 'seriNoVar', label: 'Ãœnite Seri No', aciklama: 'Ãœnite seri numarasÄ± raporda mevcut mu?', sira: 1 },
-    { key: 'fotografVar', label: 'FotoÄŸraf', aciklama: 'Ä°ÅŸten fotoÄŸraf mevcut mu?', sira: 2 },
-    { key: 'aciklamaVar', label: 'AÃ§Ä±klama', aciklama: 'YapÄ±lan iÅŸ aÃ§Ä±klamasÄ± yeterli mi?', sira: 3 },
-    { key: 'saatVar', label: 'Adam/Saat', aciklama: 'Harcanan sÃ¼re belirtilmiÅŸ mi?', sira: 4 },
+    { key: 'seriNoVar', label: 'Ünite Seri No', aciklama: 'Ünite seri numarası raporda mevcut mu?', sira: 1 },
+    { key: 'fotografVar', label: 'Fotoğraf', aciklama: 'İşten fotoğraf mevcut mu?', sira: 2 },
+    { key: 'aciklamaVar', label: 'Açıklama', aciklama: 'Yapılan iş açıklaması yeterli mi?', sira: 3 },
+    { key: 'saatVar', label: 'Adam/Saat', aciklama: 'Harcanan süre belirtilmiş mi?', sira: 4 },
   ];
 
   for (const soru of raporKontrolSorulari) {
@@ -127,7 +127,7 @@ async function main() {
       create: { ...soru, kategori: 'GENEL', raporKontrolMu: true, zorunluMu: true, isTuruFilter: null },
     });
   }
-  console.log('âœ… Puanlama sorularÄ± ve rapor kontrol sorularÄ± oluÅŸturuldu');
+  console.log('✅ Puanlama soruları ve rapor kontrol soruları oluşturuldu');
 
   // Sample tekneler
   const tekne1 = await prisma.tekne.upsert({
@@ -159,7 +159,7 @@ async function main() {
       aktif: true,
     },
   });
-  console.log('âœ… Sample tekneler created');
+  console.log('✅ Sample tekneler created');
 
   // Canonical Personel Listesi - Product gereksinimine göre sabitlendi
   const personelListesi = [
@@ -211,12 +211,12 @@ async function main() {
 
   console.log('17 personel olusturuldu ve demo kayitlar pasife alindi');
 
-  // Referans iÃ§in personel deÄŸiÅŸkenleri
+  // Referans için personel değişkenleri
   const personel1 = await prisma.personel.findUnique({ where: { id: 'personel-1' } });
   const personel2 = await prisma.personel.findUnique({ where: { id: 'personel-2' } });
 
   if (!personel1 || !personel2) {
-    console.error('âŒ Personel bulunamadÄ±');
+    console.error('❌ Personel bulunamadı');
     return;
   }
 
@@ -231,7 +231,7 @@ async function main() {
       isTuru: 'PAKET',
       durum: 'DEVAM_EDİYOR',
       tarih: new Date(),
-      servisAciklamasi: 'Rutin bakÄ±m kontrolÃ¼',
+      servisAciklamasi: 'Rutin bakım kontrolü',
       adres: 'Marina A, Blok 1',
       yer: 'Yatmarin',
       telefon: '555-9999',
@@ -264,7 +264,7 @@ async function main() {
       isTuru: 'ARIZA',
       durum: 'RANDEVU_VERILDI',
       tarih: new Date(Date.now() - 86400000),
-      servisAciklamasi: 'Motor onarÄ±mÄ±',
+      servisAciklamasi: 'Motor onarımı',
       adres: 'Marina B, Blok 2',
       yer: 'Netsel',
       telefon: '555-8888',
@@ -297,7 +297,7 @@ async function main() {
       isTuru: 'PROJE',
       durum: 'TAMAMLANDI',
       tarih: new Date(Date.now() - 172800000),
-      servisAciklamasi: 'YazlÄ±k yÃ¼kleme',
+      servisAciklamasi: 'Yazlık yükleme',
       adres: 'Marina A, Blok 1',
       yer: 'Yatmarin',
       telefon: '555-7777',
@@ -319,19 +319,20 @@ async function main() {
       rol: 'SORUMLU',
     },
   });
-  console.log('âœ… Sample servisler created');
+  console.log('✅ Sample servisler created');
 
-  console.log('ğŸ‰ Seed completed successfully!');
+  console.log('🎉 Seed completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('âŒ Seed failed:', e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+
 
 
 

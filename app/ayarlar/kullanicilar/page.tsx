@@ -1,8 +1,17 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth/auth-context';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface User {
   id: string;
@@ -14,32 +23,35 @@ interface User {
 
 export default function KullanicilarPage() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [newUser, setNewUser] = useState({ ad: '', email: '', password: '', rol: 'yetkili' });
+  const [newUser, setNewUser] = useState({ ad: '', email: '', password: '', rol: 'yetkili' as 'admin' | 'yetkili' });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) {
-      router.push('/login');
+    if (isLoading) return;
+    if (!user) {
+      router.replace('/login');
       return;
     }
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.rol !== 'admin') {
-      router.push('/');
+    if (user.role !== 'ADMIN') {
+      router.replace('/');
       return;
     }
-    loadUsers();
-  }, [router]);
+    void loadUsers();
+  }, [isLoading, user, router]);
 
   const loadUsers = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/users');
-      const data = await res.json();
+      const res = await fetch('/api/users', { credentials: 'include' });
+      if (!res.ok) throw new Error('Kullanıcı listesi alınamadı');
+      const data = (await res.json()) as User[];
       setUsers(data);
     } catch (error) {
-      console.error('Failed to load users:', error);
+      toast.error(error instanceof Error ? error.message : 'Kullanıcılar yüklenemedi');
     } finally {
       setLoading(false);
     }
@@ -47,179 +59,131 @@ export default function KullanicilarPage() {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(newUser),
       });
 
-      if (res.ok) {
-        setShowForm(false);
-        setNewUser({ ad: '', email: '', password: '', rol: 'yetkili' });
-        loadUsers();
-      }
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof body?.error === 'string' ? body.error : 'Kullanıcı oluşturulamadı');
+
+      setShowForm(false);
+      setNewUser({ ad: '', email: '', password: '', rol: 'yetkili' });
+      toast.success('Kullanıcı oluşturuldu');
+      await loadUsers();
     } catch (error) {
-      console.error('Failed to add user:', error);
+      toast.error(error instanceof Error ? error.message : 'Kullanıcı oluşturulamadı');
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>Yükleniyor...</div>;
+  if (loading || isLoading) {
+    return <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-6 text-sm text-slate-300">Kullanıcılar yükleniyor...</div>;
   }
 
   return (
-    <div className="animate-fade-in">
-      <header className="hero-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-        <div className="hero-content">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-            <Link href="/ayarlar" className="btn btn-secondary" style={{ padding: 'var(--space-xs) var(--space-sm)' }}>
-              ←
-            </Link>
-            <div>
-              <h1 className="hero-title">Kullanıcı Yönetimi</h1>
-              <p className="hero-subtitle">{users.length} kullanıcı</p>
-            </div>
+    <div className="space-y-4">
+      <header className="hero-panel flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/ayarlar">
+            <Button variant="secondary" size="icon" aria-label="Ayarlar sayfasına dön">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="page-title">Kullanıcı Yönetimi</h1>
+            <p className="page-subtitle">Toplam {users.length} kullanıcı</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'İptal' : 'Yeni Kullanıcı'}
-          </button>
         </div>
+        <Button onClick={() => setShowForm((prev) => !prev)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          {showForm ? 'Formu Kapat' : 'Yeni Kullanıcı'}
+        </Button>
       </header>
 
-      {showForm && (
-        <div className="surface-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-          <h3 className="card-title">Yeni Kullanıcı Ekle</h3>
-          <form onSubmit={handleAddUser}>
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-md)' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>Ad Soyad</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newUser.ad}
-                  onChange={(e) => setNewUser({ ...newUser, ad: e.target.value })}
-                  required
-                  style={{ width: '100%' }}
-                />
+      {showForm ? (
+        <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-100">
+              <UserPlus className="h-4 w-4 text-sky-300" />
+              Yeni Kullanıcı Ekle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddUser} className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Ad Soyad</Label>
+                <Input value={newUser.ad} onChange={(e) => setNewUser((prev) => ({ ...prev, ad: e.target.value }))} required />
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>E-posta</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  required
-                  style={{ width: '100%' }}
-                />
+              <div className="space-y-2">
+                <Label>E-posta</Label>
+                <Input type="email" value={newUser.email} onChange={(e) => setNewUser((prev) => ({ ...prev, email: e.target.value }))} required />
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>Şifre</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  placeholder="Varsayılan: servicepro123"
-                  style={{ width: '100%' }}
-                />
+              <div className="space-y-2">
+                <Label>Şifre</Label>
+                <Input type="password" placeholder="Boş bırakılırsa varsayılan atanır" value={newUser.password} onChange={(e) => setNewUser((prev) => ({ ...prev, password: e.target.value }))} />
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 'var(--space-xs)', fontSize: '0.85rem' }}>Rol</label>
-                <select
-                  className="form-select"
-                  value={newUser.rol}
-                  onChange={(e) => setNewUser({ ...newUser, rol: e.target.value as 'admin' | 'yetkili' })}
-                  style={{ width: '100%' }}
-                >
-                  <option value="yetkili">Yetkili</option>
-                  <option value="admin">Admin</option>
-                </select>
+              <div className="space-y-2">
+                <Label>Rol</Label>
+                <Select value={newUser.rol} onValueChange={(value) => setNewUser((prev) => ({ ...prev, rol: value as 'admin' | 'yetkili' }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yetkili">Yetkili</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
-              Kullanıcı Ekle
-            </button>
-          </form>
-        </div>
-      )}
+              <div className="md:col-span-2">
+                <Button type="submit" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kullanıcıyı Kaydet'}</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <div className="surface-panel table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Kullanıcı</th>
-              <th>E-posta</th>
-              <th>Rol</th>
-              <th>Durum</th>
-              <th>İşlemler</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                    <div
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: user.rol === 'admin' ? 'var(--color-primary)' : 'var(--color-info)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        color: 'white',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {user.ad?.slice(0, 1).toUpperCase() || 'K'}
-                    </div>
-                    <span style={{ fontWeight: 500 }}>{user.ad}</span>
-                  </div>
-                </td>
-                <td>{user.email}</td>
-                <td>
-                  <span
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      background: user.rol === 'admin' ? 'var(--color-primary)' : 'var(--color-info)',
-                      color: 'white',
-                    }}
-                  >
-                    {user.rol === 'admin' ? 'Admin' : 'Yetkili'}
-                  </span>
-                </td>
-                <td>
-                  <span
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      background: user.aktif ? 'var(--color-success)' : 'var(--color-error)',
-                      color: 'white',
-                    }}
-                  >
-                    {user.aktif ? 'Aktif' : 'Pasif'}
-                  </span>
-                </td>
-                <td>
-                  <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
-                    Düzenle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card className="surface-panel border-slate-800/80 bg-slate-950/50">
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kullanıcı</TableHead>
+                <TableHead>E-posta</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Durum</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-slate-400">Kullanıcı kaydı bulunamadı</TableCell>
+                </TableRow>
+              ) : (
+                users.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium text-slate-100">{item.ad}</TableCell>
+                    <TableCell>{item.email}</TableCell>
+                    <TableCell>
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.rol === 'admin' ? 'bg-sky-500/20 text-sky-200' : 'bg-violet-500/20 text-violet-200'}`}>
+                        {item.rol === 'admin' ? 'Admin' : 'Yetkili'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.aktif ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}>
+                        {item.aktif ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
-const DD_MM_YYYY = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/;
+const DD_MM_YYYY = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/;
 const YYYY_MM_DD = /^(\d{4})-(\d{2})-(\d{2})/;
-const NUMERIC_VALUE = /^-?\d+(\.\d+)?$/;
+const NUMERIC_VALUE = /^-?\d+([.,]\d+)?$/;
 
 // Google Sheets / Excel serial date epoch (accounts for Excel's 1900 leap-year behavior).
 const SHEETS_SERIAL_EPOCH_UTC = Date.UTC(1899, 11, 30);
@@ -30,9 +30,15 @@ function isValidParts(parts: DateParts): boolean {
 
 function parseSheetsSerialDateParts(value: unknown): DateParts | null {
   const raw = String(value ?? "").trim();
-  if (!raw || !NUMERIC_VALUE.test(raw)) return null;
+  if (!raw) return null;
 
-  const serial = Number(raw);
+  const normalized = raw
+    .replace(/^'+|'+$/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!NUMERIC_VALUE.test(normalized)) return null;
+
+  const serial = Number(normalized);
   if (!Number.isFinite(serial)) return null;
 
   // Guard against mistaking plain year-like numeric text (e.g. "2024") for serial dates.

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 // GET: Aylık performans raporu
-// Query params: ?ay=2026-02&lokasyon=YATMARIN|NETSEL|DIS_SERVIS
+// Query params: 'ay=2026-02&lokasyon=YATMARIN|NETSEL|DIS_SERVIS
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
@@ -145,4 +145,3 @@ export async function GET(request: NextRequest) {
         );
     }
 }
-

@@ -1,0 +1,5 @@
+services:
+  servicepro:
+    env_file:
+      - .env.production
+      - .env

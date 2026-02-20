@@ -1,0 +1,114 @@
+
+> servicepro@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1888ms
+ ✓ Compiled /middleware in 165ms (73 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 3.6s (1059 modules)
+ GET /login 200 in 4102ms
+ ✓ Compiled in 589ms (541 modules)
+ ✓ Compiled /api/auth/me in 399ms (617 modules)
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 2020ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 91ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 574ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1024ms (2332 modules)
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 91ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 97ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 91ms
+ ✓ Compiled /api/dashboard-stats in 182ms (1216 modules)
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."personel"."id" FROM "public"."personel" WHERE ("public"."personel"."deleted_at" IS NULL AND "public"."personel"."aktif" = $1) OFFSET $2) AS "sub"
+prisma:query SELECT COUNT("public"."service_personel"."personel_id") AS "_count$personel_id", "public"."service_personel"."personel_id" FROM "public"."service_personel" LEFT JOIN "public"."servis" AS "j0" ON ("j0"."id") = ("public"."service_personel"."servis_id") WHERE ("j0"."deleted_at" IS NULL AND "j0"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"),CAST($6::text AS "public"."ServisDurumu")) AND ("j0"."id" IS NOT NULL)) GROUP BY "public"."service_personel"."personel_id" OFFSET $7
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" < $1 AND "public"."servis"."durum" IN (CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"),CAST($6::text AS "public"."ServisDurumu"),CAST($7::text AS "public"."ServisDurumu"))) OFFSET $8) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"),CAST($6::text AS "public"."ServisDurumu"))) OFFSET $7) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT "public"."servis"."id", "public"."servis"."tekne_id", "public"."servis"."tekne_adi", "public"."servis"."tarih", "public"."servis"."is_turu"::text, "public"."servis"."servis_aciklamasi" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu") AND "public"."servis"."tarih" IS NOT NULL AND "public"."servis"."tarih" >= $2) ORDER BY "public"."servis"."tekne_id" ASC, "public"."servis"."tarih" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."servis"."id", "public"."servis"."created_at", "public"."servis"."tarih" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"))) ORDER BY "public"."servis"."created_at" ASC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."sync_log"."id", "public"."sync_log"."status", "public"."sync_log"."created_at" FROM "public"."sync_log" WHERE "public"."sync_log"."status" IN ($1,$2) ORDER BY "public"."sync_log"."created_at" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT COUNT("public"."servis"."durum") AS "_count$durum", "public"."servis"."durum"::text FROM "public"."servis" WHERE "public"."servis"."deleted_at" IS NULL GROUP BY "public"."servis"."durum" OFFSET $1
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"),CAST($6::text AS "public"."ServisDurumu"))) OFFSET $7) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" >= $1 AND "public"."servis"."tarih" <= $2 AND "public"."servis"."durum" = CAST($3::text AS "public"."ServisDurumu")) OFFSET $4) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT "public"."servis"."id", "public"."servis"."created_at" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" IS NULL AND "public"."servis"."created_at" >= $1) ORDER BY "public"."servis"."created_at" ASC OFFSET $2
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" >= $1 AND "public"."servis"."tarih" <= $2 AND "public"."servis"."durum" NOT IN (CAST($3::text AS "public"."ServisDurumu"))) OFFSET $4) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" >= $1 AND "public"."servis"."tarih" <= $2 AND "public"."servis"."durum" = CAST($3::text AS "public"."ServisDurumu")) OFFSET $4) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" >= $1 AND "public"."servis"."tarih" <= $2 AND "public"."servis"."durum" = CAST($3::text AS "public"."ServisDurumu")) OFFSET $4) AS "sub"
+prisma:query SELECT "public"."sync_log"."id", "public"."sync_log"."status", "public"."sync_log"."created_at" FROM "public"."sync_log" WHERE 1=1 ORDER BY "public"."sync_log"."created_at" DESC LIMIT $1 OFFSET $2
+prisma:query SELECT "public"."servis"."id", "public"."servis"."tekne_adi", "public"."servis"."tarih", "public"."servis"."saat", "public"."servis"."yer", "public"."servis"."durum"::text, "public"."servis"."is_turu"::text, COALESCE("aggr_selection_0_ServicePersonel"."_aggr_count_personeller", 0) AS "_aggr_count_personeller" FROM "public"."servis" LEFT JOIN (SELECT "public"."service_personel"."servis_id", COUNT(*) AS "_aggr_count_personeller" FROM "public"."service_personel" WHERE 1=1 GROUP BY "public"."service_personel"."servis_id") AS "aggr_selection_0_ServicePersonel" ON ("public"."servis"."id" = "aggr_selection_0_ServicePersonel"."servis_id") WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" >= $1 AND "public"."servis"."tarih" <= $2 AND "public"."servis"."durum" NOT IN (CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"))) ORDER BY "public"."servis"."saat" ASC, "public"."servis"."created_at" ASC LIMIT $5 OFFSET $6
+prisma:query SELECT COUNT(*) AS "_count$_all", "public"."servis"."adres" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"),CAST($6::text AS "public"."ServisDurumu"))) GROUP BY "public"."servis"."adres" OFFSET $7
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu") AND "public"."servis"."tarih" >= $2 AND "public"."servis"."tarih" <= $3) OFFSET $4) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."tekne"."id" FROM "public"."tekne" WHERE ("public"."tekne"."deleted_at" IS NULL AND "public"."tekne"."aktif" = $1) OFFSET $2) AS "sub"
+prisma:query SELECT "public"."personel"."id", "public"."personel"."ad", "public"."personel"."unvan"::text FROM "public"."personel" WHERE ("public"."personel"."deleted_at" IS NULL AND "public"."personel"."aktif" = $1) OFFSET $2
+ GET /api/dashboard-stats 200 in 957ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 149ms
+ ✓ Compiled /api/weather in 162ms (1218 modules)
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 80ms
+ ✓ Compiled /api/weather/locations in 142ms (1220 modules)
+ GET /api/weather?lat=36.8547&lon=28.2742&name=Marmaris 502 in 537ms
+ GET /api/weather/locations?q=Marmaris 502 in 503ms
+prisma:query SELECT 1
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 155ms
+ ○ Compiling /servisler ...
+ ✓ Compiled /servisler in 770ms (2443 modules)
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT 1
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" = CAST($1::text AS "public"."ServisDurumu")) OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"))) OFFSET $3) AS "sub"
+prisma:query SELECT COUNT(*) AS "_count$_all", "public"."servis"."durum"::text FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."tarih" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"),CAST($3::text AS "public"."ServisDurumu"),CAST($4::text AS "public"."ServisDurumu"),CAST($5::text AS "public"."ServisDurumu"))) GROUP BY "public"."servis"."durum" OFFSET $6
+prisma:query SELECT "public"."sync_log"."id", "public"."sync_log"."status", "public"."sync_log"."created_at" FROM "public"."sync_log" WHERE 1=1 ORDER BY "public"."sync_log"."created_at" DESC LIMIT $1 OFFSET $2
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."servis"."id" FROM "public"."servis" WHERE ("public"."servis"."deleted_at" IS NULL AND "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu"))) OFFSET $3) AS "sub"
+prisma:query SELECT "public"."servis"."id", "public"."servis"."tarih", "public"."servis"."tahmini_bitis_tarihi", "public"."servis"."saat", "public"."servis"."tekne_adi", "public"."servis"."adres", "public"."servis"."yer", "public"."servis"."servis_aciklamasi", "public"."servis"."irtibat_kisi", "public"."servis"."telefon", "public"."servis"."durum"::text, "public"."servis"."is_turu"::text, "public"."servis"."created_at", COALESCE("aggr_selection_0_ServicePersonel"."_aggr_count_personeller", 0) AS "_aggr_count_personeller" FROM "public"."servis" LEFT JOIN (SELECT "public"."service_personel"."servis_id", COUNT(*) AS "_aggr_count_personeller" FROM "public"."service_personel" WHERE 1=1 GROUP BY "public"."service_personel"."servis_id") AS "aggr_selection_0_ServicePersonel" ON ("public"."servis"."id" = "aggr_selection_0_ServicePersonel"."servis_id") WHERE ("public"."servis"."deleted_at" IS NULL AND (NOT "public"."servis"."durum" IN (CAST($1::text AS "public"."ServisDurumu"),CAST($2::text AS "public"."ServisDurumu")))) ORDER BY "public"."servis"."tarih" DESC, "public"."servis"."created_at" DESC LIMIT $3 OFFSET $4
+ GET /servisler 200 in 1287ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 97ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 82ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 84ms
+ ○ Compiling /servisler/yeni ...
+ ✓ Compiled /servisler/yeni in 738ms (2457 modules)
+ GET /servisler/yeni 200 in 948ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 104ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 153ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 162ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 77ms
+ ○ Compiling /api/personel ...
+ ✓ Compiled /api/personel in 944ms (1298 modules)
+ ✓ Compiled (1301 modules)
+ GET /api/settings 200 in 1293ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 79ms
+ GET /api/settings 200 in 11ms
+prisma:query SELECT "public"."personel"."id", "public"."personel"."ad", "public"."personel"."rol", "public"."personel"."unvan"::text, "public"."personel"."aktif", "public"."personel"."giris_yili" FROM "public"."personel" WHERE ("public"."personel"."deleted_at" IS NULL AND "public"."personel"."aktif" = $1) ORDER BY "public"."personel"."ad" ASC OFFSET $2
+ GET /api/personel?aktif=true 200 in 1484ms
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."ad", "public"."users"."role"::text, "public"."users"."aktif", "public"."users"."email_verified", "public"."users"."created_at", "public"."users"."updated_at", "public"."users"."last_login_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/me 200 in 82ms
+prisma:query SELECT "public"."personel"."id", "public"."personel"."ad", "public"."personel"."rol", "public"."personel"."unvan"::text, "public"."personel"."aktif", "public"."personel"."giris_yili" FROM "public"."personel" WHERE ("public"."personel"."deleted_at" IS NULL AND "public"."personel"."aktif" = $1) ORDER BY "public"."personel"."ad" ASC OFFSET $2
+ GET /api/personel?aktif=true 200 in 81ms
+[?25h
