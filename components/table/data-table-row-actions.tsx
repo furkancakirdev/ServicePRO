@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -105,7 +105,7 @@ export const DataTableRowActions = React.memo(function DataTableRowActions({
         >
           <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push(`/servisler/${service.id}/duzenle`)}>
+          <DropdownMenuItem onClick={() => router.push(`/is-emirleri/${service.id}/duzenle`)}>
             <PencilLine className="mr-2 h-4 w-4" />
             Düzenle
           </DropdownMenuItem>

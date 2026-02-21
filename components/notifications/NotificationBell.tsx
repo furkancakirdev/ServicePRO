@@ -109,7 +109,7 @@ export function NotificationBell() {
 
         const payload = (await response.json().catch(() => null)) as NotificationRecord | null;
         if (!response.ok) {
-          throw new Error(parseError(payload, 'Bildirim okundu yapilamadi'));
+          throw new Error(parseError(payload, 'Bildirim okundu yapılamadı'));
         }
 
         setNotifications((current) =>
@@ -129,7 +129,7 @@ export function NotificationBell() {
           readCount: current.readCount + 1,
         }));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Bildirim okundu yapilamadi');
+        toast.error(error instanceof Error ? error.message : 'Bildirim okundu yapılamadı');
       } finally {
         setBusy(false);
       }
@@ -149,7 +149,7 @@ export function NotificationBell() {
       });
       const payload = (await response.json().catch(() => null)) as { updatedCount?: number; error?: string } | null;
       if (!response.ok) {
-        throw new Error(parseError(payload, 'Tum bildirimler okundu yapilamadi'));
+        throw new Error(parseError(payload, 'Tüm bildirimler okundu yapılamadı'));
       }
 
       setNotifications((current) =>
@@ -168,9 +168,9 @@ export function NotificationBell() {
         unreadCount: 0,
         readCount: current.readCount + (payload?.updatedCount ?? 0),
       }));
-      toast.success('Tum bildirimler okundu olarak isaretlendi');
+      toast.success('Tüm bildirimler okundu olarak işaretlendi');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Tum bildirimler okundu yapilamadi');
+      toast.error(error instanceof Error ? error.message : 'Tüm bildirimler okundu yapılamadı');
     } finally {
       setBusy(false);
     }
@@ -205,7 +205,7 @@ export function NotificationBell() {
               data-testid="notification-bell-read-all"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              Tumunu okundu yap
+              Tümünü okundu yap
             </Button>
           ) : null}
         </DropdownMenuLabel>
@@ -214,7 +214,7 @@ export function NotificationBell() {
         {loading ? (
           <div className="flex items-center gap-2 px-2 py-4 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Bildirimler yukleniyor...
+            Bildirimler yükleniyor...
           </div>
         ) : visibleNotifications.length === 0 ? (
           <div className="px-2 py-4 text-sm text-muted-foreground">Yeni bildirim yok.</div>
@@ -248,7 +248,7 @@ export function NotificationBell() {
                   <span>{formatDateTimeForUi(item.createdAt)}</span>
                   {item.actionUrl ? (
                     <Link href={item.actionUrl} className="text-primary hover:underline">
-                      Ac
+                      Aç
                     </Link>
                   ) : null}
                 </div>

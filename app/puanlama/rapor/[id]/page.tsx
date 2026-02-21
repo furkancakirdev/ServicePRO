@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -70,7 +70,7 @@ export default function KapanisRaporPage() {
         // TODO: API call
         console.log('Rapor:', rapor);
         console.log('Başarı:', raporBasarisi, 'Sorumlu Puan:', sorumlPuan.finalPuan);
-        router.push('/servisler');
+        router.push('/is-emirleri');
     };
 
     return (

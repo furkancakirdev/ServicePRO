@@ -5,8 +5,8 @@ import { PageLoadingState } from '@/components/ui/page-states';
 export default function ServislerLoading() {
   return (
     <PageContent>
-      <PageHeader title="Is Emirleri" description="Arama ve filtreleme" />
-      <PageLoadingState label="Is emirleri yukleniyor..." />
+      <PageHeader title="İş Emirleri" description="Arama ve filtreleme" />
+      <PageLoadingState label="İş emirleri yükleniyor..." />
     </PageContent>
   );
 }

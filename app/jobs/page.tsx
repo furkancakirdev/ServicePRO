@@ -1,1 +1,5 @@
-export { default } from '@/app/servisler/page';
+import { permanentRedirect } from 'next/navigation';
+
+export default function JobsRedirectPage() {
+  permanentRedirect('/is-emirleri');
+}

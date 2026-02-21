@@ -46,7 +46,7 @@ async function fetchOpenServicesForPersonnel(personelId: string): Promise<Servic
   });
 
   if (!response.ok) {
-    throw new Error('Personel is listesi alinamadi');
+    throw new Error('Personel iş listesi alınamadı');
   }
 
   const payload = (await response.json()) as {
@@ -199,7 +199,7 @@ export default function PersonelDetailPage() {
   if (loading) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <p>Yukleniyor...</p>
+        <p>Yükleniyor...</p>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function PersonelDetailPage() {
         <h2>Personel bulunamadi</h2>
         <p style={{ color: 'var(--color-text-muted)' }}>ID: {id}</p>
         <Link href="/personel" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
-          ← Personel listesine don
+          â† Personel listesine don
         </Link>
       </div>
     );
@@ -225,7 +225,7 @@ export default function PersonelDetailPage() {
         <div className="hero-content" style={{ width: '100%', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
             <button onClick={() => router.back()} className="btn btn-secondary" style={{ padding: 'var(--space-sm)' }}>
-              ←
+              â†
             </button>
             <div>
               <h1 className="hero-title" data-testid="personel-baslik">{personel.ad}</h1>
@@ -412,7 +412,7 @@ export default function PersonelDetailPage() {
               <div style={{ fontSize: '3rem', fontWeight: 700 }}>{avgPuan || '-'}</div>
               <div style={{ opacity: 0.8 }}>Aylik Ortalama Puan</div>
               <div style={{ marginTop: 'var(--space-sm)', fontSize: '0.85rem', opacity: 0.85 }}>
-                Acik Is Emri: {assignedServices.length}
+                Açık İş Emri: {assignedServices.length}
               </div>
             </div>
           </div>
@@ -441,12 +441,12 @@ export default function PersonelDetailPage() {
 
           <div className="surface-panel" data-testid="personel-open-work-orders">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
-              Acik Is Emirleri ({assignedServices.length})
+              Açık İş Emirleri ({assignedServices.length})
             </h3>
 
             {assignedServices.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-muted)' }}>
-                Bu personel icin acik is emri bulunamadi.
+                Bu personel için açık iş emri bulunamadı.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -455,7 +455,7 @@ export default function PersonelDetailPage() {
                   return (
                     <Link
                       key={service.id}
-                      href={`/servisler/${service.id}`}
+                      href={`/is-emirleri/${service.id}`}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -498,3 +498,4 @@ export default function PersonelDetailPage() {
     </div>
   );
 }
+

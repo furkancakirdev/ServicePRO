@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -273,7 +273,7 @@ export default function OperationsCenter() {
 
   const handleDateSelect = useCallback(
     (selection: DateSelectArg) => {
-      router.push(`/servisler/yeni?tarih=${selection.startStr}`);
+      router.push(`/is-emirleri/yeni?tarih=${selection.startStr}`);
     },
     [router]
   );
@@ -332,7 +332,7 @@ export default function OperationsCenter() {
 
   const goToEditPage = useCallback(() => {
     if (!selectedService) return;
-    router.push(`/servisler/${selectedService.service.id}/duzenle`);
+    router.push(`/is-emirleri/${selectedService.service.id}/duzenle`);
   }, [router, selectedService]);
 
   if (loading) {
@@ -368,7 +368,7 @@ export default function OperationsCenter() {
               <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               Yenile
             </Button>
-            <Button type="button" onClick={() => router.push('/servisler')} data-testid="operations-services-list">
+            <Button type="button" onClick={() => router.push('/is-emirleri')} data-testid="operations-services-list">
               Servis Listesi
             </Button>
           </div>
@@ -496,7 +496,7 @@ export default function OperationsCenter() {
                 <TabsContent value="plan-list" className="mt-0">
                   <PlanListView
                     services={filteredServices}
-                    onEditService={(serviceId) => router.push(`/servisler/${serviceId}/duzenle`)}
+                    onEditService={(serviceId) => router.push(`/is-emirleri/${serviceId}/duzenle`)}
                   />
                 </TabsContent>
 
@@ -556,7 +556,7 @@ export default function OperationsCenter() {
                       key={service.id}
                       type="button"
                       className="w-full rounded-lg border border-slate-700/70 bg-slate-900/50 p-3 text-left transition hover:border-sky-500/60"
-                      onClick={() => router.push(`/servisler/${service.id}/duzenle`)}
+                      onClick={() => router.push(`/is-emirleri/${service.id}/duzenle`)}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="line-clamp-1 text-sm font-medium text-slate-100">{service.tekneAdi}</p>
@@ -587,7 +587,7 @@ export default function OperationsCenter() {
       <WeeklyOperationsDashboard overview={overview} loading={refreshing && !overview} />
 
       <MinimumRole minimumRole="YETKILI" fallback={<div />}>
-        <Button type="button" size="lg" onClick={() => router.push('/servisler/yeni')} data-testid="operations-new-service">
+        <Button type="button" size="lg" onClick={() => router.push('/is-emirleri/yeni')} data-testid="operations-new-service">
           + Yeni Servis Ekle
         </Button>
       </MinimumRole>

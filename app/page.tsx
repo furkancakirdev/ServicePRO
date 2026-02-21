@@ -42,9 +42,9 @@ type DashboardRange = 7 | 30 | 90;
 type DashboardTab = 'operasyon' | 'analitik' | 'kalite';
 
 const DASHBOARD_RANGE_OPTIONS: Array<{ value: DashboardRange; label: string }> = [
-  { value: 7, label: 'Son 7 Gun' },
-  { value: 30, label: 'Son 30 Gun' },
-  { value: 90, label: 'Son 90 Gun' },
+  { value: 7, label: 'Son 7 Gün' },
+  { value: 30, label: 'Son 30 Gün' },
+  { value: 90, label: 'Son 90 Gün' },
 ];
 
 function kaliteSkoruSinifi(ortalamaPuan: number): string {
@@ -98,7 +98,7 @@ export default function HomePage() {
         setError(null);
       } catch (fetchError) {
         if (ignore || controller.signal.aborted) return;
-        setError(fetchError instanceof Error ? fetchError.message : 'Dashboard yuklenemedi');
+        setError(fetchError instanceof Error ? fetchError.message : 'Panel yüklenemedi');
       } finally {
         if (!ignore && !controller.signal.aborted) {
           setLoading(false);
@@ -136,30 +136,30 @@ export default function HomePage() {
     () => [
       {
         id: 'acik',
-        label: 'Acik Is',
+        label: 'Açık İş',
         value: stats?.aktifServisler ?? 0,
-        href: '/servisler?status=RANDEVU_VERILDI,DEVAM_EDIYOR,PARCA_BEKLIYOR,MUSTERI_ONAY_BEKLIYOR,RAPOR_BEKLIYOR',
+        href: '/is-emirleri?status=RANDEVU_VERILDI,DEVAM_EDIYOR,PARCA_BEKLIYOR,MUSTERI_ONAY_BEKLIYOR,RAPOR_BEKLIYOR',
         icon: <Wrench className="h-4 w-4" />,
       },
       {
         id: 'planli',
-        label: 'Bugun Planli',
+        label: 'Bugün Planlı',
         value: stats?.bugunRandevulu ?? 0,
-        href: '/servisler?status=RANDEVU_VERILDI&preset=BUGUN',
+        href: '/is-emirleri?status=RANDEVU_VERILDI&preset=BUGUN',
         icon: <CalendarClock className="h-4 w-4" />,
       },
       {
         id: 'blokaj',
-        label: 'Blokajli',
+        label: 'Blokajlı',
         value: (stats?.parcaBekleyen ?? 0) + (stats?.onayBekleyen ?? 0) + (stats?.raporBekleyen ?? 0),
-        href: '/servisler?status=PARCA_BEKLIYOR,MUSTERI_ONAY_BEKLIYOR,RAPOR_BEKLIYOR',
+        href: '/is-emirleri?status=PARCA_BEKLIYOR,MUSTERI_ONAY_BEKLIYOR,RAPOR_BEKLIYOR',
         icon: <AlertTriangle className="h-4 w-4" />,
       },
       {
         id: 'risk',
         label: 'SLA Risk',
         value: stats?.gecikenServisler ?? 0,
-        href: '/servisler?queue=OVERDUE',
+        href: '/is-emirleri?queue=OVERDUE',
         icon: <CheckCircle2 className="h-4 w-4" />,
       },
     ],
@@ -183,8 +183,8 @@ export default function HomePage() {
   if (isLoading || loading) {
     return (
       <PageContent>
-        <PageHeader title="Operasyon Paneli" description="Gunluk akis" />
-        <PageLoadingState label="Operasyon verileri yukleniyor..." />
+        <PageHeader title="Operasyon Paneli" description="Günlük akış" />
+        <PageLoadingState label="Operasyon verileri yükleniyor..." />
       </PageContent>
     );
   }
@@ -192,9 +192,9 @@ export default function HomePage() {
   if (error) {
     return (
       <PageContent>
-        <PageHeader title="Operasyon Paneli" description="Gunluk akis" />
+        <PageHeader title="Operasyon Paneli" description="Günlük akış" />
         <PageErrorState
-          title="Dashboard yuklenemedi"
+          title="Panel yüklenemedi"
           description={error}
           onRetry={() => window.location.reload()}
         />
@@ -206,14 +206,14 @@ export default function HomePage() {
     <PageContent data-testid="dashboard-operation-page">
       <PageHeader
         title="Operasyon Paneli"
-        description="Bugun + risk + kapasite"
+        description="Bugün + risk + kapasite"
         breadcrumbs={[
           { label: 'Operasyon' },
         ]}
         rightActions={
-          <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
+          <Link href="/is-emirleri/yeni" className="btn btn-primary h-10 px-4 py-2">
             <Plus className="mr-2 h-4 w-4" />
-            Yeni Is Emri
+            Yeni İş Emri
           </Link>
         }
       />
@@ -231,7 +231,7 @@ export default function HomePage() {
               <Link
                 key={kpi.id}
                 href={kpi.href}
-                title={`${kpi.label} detayini ac`}
+                title={`${kpi.label} detayını aç`}
                 className="surface-panel p-4 transition hover:border-primary/50"
               >
                 <div className="flex items-center justify-between">
@@ -246,13 +246,13 @@ export default function HomePage() {
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_340px]">
             <Card className="surface-panel">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Today Queue: Planlanacaklar</CardTitle>
+                <CardTitle className="text-base">Bugünün Kuyruğu: Planlanacaklar</CardTitle>
               </CardHeader>
               <CardContent>
                 {plannedRows.length === 0 ? (
                   <PageEmptyState
-                    title="Bugun planlanacak kayit yok"
-                    description="Yeni is emri olusturabilir veya filtreleri kontrol edebilirsiniz."
+                    title="Bugün planlanacak kayıt yok"
+                    description="Yeni iş emri oluşturabilir veya filtreleri kontrol edebilirsiniz."
                     className="min-h-[180px] p-4"
                   />
                 ) : (
@@ -266,8 +266,8 @@ export default function HomePage() {
                               {item.tarih ? formatDateDdmmyyyShortMonth(item.tarih) : 'Tarihsiz'} {item.saat || '--:--'}
                             </p>
                           </div>
-                          <Link href={`/servisler/${item.id}`} className="btn btn-secondary h-8 px-3 py-1 text-xs">
-                            Ac
+                          <Link href={`/is-emirleri/${item.id}`} className="btn btn-secondary h-8 px-3 py-1 text-xs">
+                            Aç
                           </Link>
                         </div>
                       </li>
@@ -279,13 +279,13 @@ export default function HomePage() {
 
             <Card className="surface-panel">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Today Queue: Blokajlilar</CardTitle>
+                <CardTitle className="text-base">Bugünün Kuyruğu: Blokajlılar</CardTitle>
               </CardHeader>
               <CardContent>
                 {blockedRows.length === 0 ? (
                   <PageEmptyState
-                    title="Aktif blokaj kaydi yok"
-                    description="Bekleyen kayit olusursa bu alanda listelenir."
+                    title="Aktif blokaj kaydı yok"
+                    description="Bekleyen kayıt oluşursa bu alanda listelenir."
                     className="min-h-[180px] p-4"
                   />
                 ) : (
@@ -300,8 +300,8 @@ export default function HomePage() {
                               <p className="text-xs text-muted-foreground">{item.servisAciklamasi}</p>
                               <Badge className={`mt-2 ${status.bgColor} ${status.color}`}>{status.label}</Badge>
                             </div>
-                            <Link href={`/servisler/${item.id}`} className="btn btn-secondary h-8 px-3 py-1 text-xs">
-                              Ac
+                            <Link href={`/is-emirleri/${item.id}`} className="btn btn-secondary h-8 px-3 py-1 text-xs">
+                              Aç
                             </Link>
                           </div>
                         </li>
@@ -314,13 +314,13 @@ export default function HomePage() {
 
             <Card className="surface-panel">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Technician Summary</CardTitle>
+                <CardTitle className="text-base">Teknisyen Özeti</CardTitle>
               </CardHeader>
               <CardContent>
                 {(stats?.teknisyenDurumu ?? []).length === 0 ? (
                   <PageEmptyState
-                    title="Teknisyen kaydi yok"
-                    description="Personel kayitlari eklendiginde burada gorunur."
+                    title="Teknisyen kaydı yok"
+                    description="Personel kayıtları eklendiğinde burada görünür."
                     className="min-h-[180px] p-4"
                   />
                 ) : (
@@ -333,7 +333,7 @@ export default function HomePage() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-foreground">{tech.aktifServisSayisi}</p>
-                          <p className="text-xs text-muted-foreground">{tech.bosMu ? 'Musait' : 'Yogun'}</p>
+                          <p className="text-xs text-muted-foreground">{tech.bosMu ? 'Müsait' : 'Yoğun'}</p>
                         </div>
                       </li>
                     ))}
@@ -348,7 +348,7 @@ export default function HomePage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                Zaman araligi secimi grafikleri son {dashboardRange} gun verisine gore gunceller.
+                Zaman aralığı seçimi grafikleri son {dashboardRange} gün verisine göre günceller.
               </p>
               <div className="flex items-center gap-2" data-testid="dashboard-range-filter">
                 {DASHBOARD_RANGE_OPTIONS.map((option) => (
@@ -371,7 +371,7 @@ export default function HomePage() {
                 <CardContent className="p-4">
                   <PageEmptyState
                     title="Analitik veri bulunamadi"
-                    description="Secili tarih araliginda dashboard analitik verisi olusmadi."
+                    description="Seçili tarih aralığında panel analitik verisi oluşmadı."
                     className="min-h-[220px] p-2"
                   />
                 </CardContent>
@@ -380,7 +380,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <Card className="surface-panel" data-testid="dashboard-analytics-unscheduled-chart">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Planlanmamis Is Trendi</CardTitle>
+                    <CardTitle className="text-base">Planlanmamış İş Trendi</CardTitle>
                   </CardHeader>
                   <CardContent className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
@@ -411,7 +411,7 @@ export default function HomePage() {
 
                 <Card className="surface-panel" data-testid="dashboard-analytics-location-chart">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Lokasyon Yuk Dagilimi</CardTitle>
+                    <CardTitle className="text-base">Lokasyon Yük Dağılımı</CardTitle>
                   </CardHeader>
                   <CardContent className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
@@ -431,7 +431,7 @@ export default function HomePage() {
 
                 <Card className="surface-panel xl:col-span-2" data-testid="dashboard-analytics-funnel-chart">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Durum Akisi (Plan / Aktif / Bekleyen / Tamam)</CardTitle>
+                    <CardTitle className="text-base">Durum Akışı (Plan / Aktif / Bekleyen / Tamam)</CardTitle>
                   </CardHeader>
                   <CardContent className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
@@ -457,7 +457,7 @@ export default function HomePage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                Kalite kartlari secili aralikta olusan servis puanlariyla hesaplanir.
+                Kalite kartları seçili aralıkta oluşan servis puanlarıyla hesaplanır.
               </p>
               <div className="flex items-center gap-2" data-testid="dashboard-quality-range-filter">
                 {DASHBOARD_RANGE_OPTIONS.map((option) => (
@@ -480,7 +480,7 @@ export default function HomePage() {
                 <CardContent className="p-4">
                   <PageEmptyState
                     title="Kalite verisi bulunamadi"
-                    description="Secili aralikta puanlama kaydi olmadigi icin kalite ozeti olusmadi."
+                    description="Seçili aralıkta puanlama kaydı olmadığı için kalite özeti oluşmadı."
                     className="min-h-[220px] p-2"
                   />
                 </CardContent>
@@ -520,11 +520,11 @@ export default function HomePage() {
 
                 <Card className="surface-panel" data-testid="dashboard-quality-top-list">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Top Performers</CardTitle>
+                    <CardTitle className="text-base">En İyi Performans</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {(stats?.qualityTopPerformers ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Yeterli kayit yok.</p>
+                      <p className="text-sm text-muted-foreground">Yeterli kayıt yok.</p>
                     ) : (
                       <ol className="space-y-2">
                         {(stats?.qualityTopPerformers ?? []).map((item, index) => (
@@ -552,11 +552,11 @@ export default function HomePage() {
 
                 <Card className="surface-panel" data-testid="dashboard-quality-low-list">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Low Performers</CardTitle>
+                    <CardTitle className="text-base">Gelişime Açık Performans</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {(stats?.qualityLowPerformers ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Yeterli kayit yok.</p>
+                      <p className="text-sm text-muted-foreground">Yeterli kayıt yok.</p>
                     ) : (
                       <ol className="space-y-2">
                         {(stats?.qualityLowPerformers ?? []).map((item, index) => (

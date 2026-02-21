@@ -135,6 +135,7 @@ function parseCompanySettings(value: unknown): CompanySettings {
   const raw = isRecord(value) ? value : {};
   return {
     name: getString(raw.name, DEFAULT_APP_SETTINGS.company.name),
+    logoUrl: getString(raw.logoUrl, DEFAULT_APP_SETTINGS.company.logoUrl),
     supportEmail: getString(raw.supportEmail, DEFAULT_APP_SETTINGS.company.supportEmail),
     supportPhone: getString(raw.supportPhone, DEFAULT_APP_SETTINGS.company.supportPhone),
   };
@@ -235,6 +236,7 @@ function mapLegacyFields(value: UnknownRecord): UnknownRecord {
       ? value.company
       : {
           name: legacyCompany.ad,
+          logoUrl: legacyCompany.logoUrl,
           supportEmail: legacyCompany.email,
           supportPhone: legacyCompany.tel,
         },

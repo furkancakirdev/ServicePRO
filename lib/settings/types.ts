@@ -38,6 +38,7 @@ export interface AccessSettings {
 
 export interface CompanySettings {
   name: string;
+  logoUrl: string;
   supportEmail: string;
   supportPhone: string;
 }
@@ -108,6 +109,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   },
   company: {
     name: 'ServicePRO',
+    logoUrl: '',
     supportEmail: 'destek@servicepro.local',
     supportPhone: '+90 252 000 00 00',
   },

@@ -103,7 +103,7 @@ export default function ProactiveMaintenanceAlerts({ alerts }: ProactiveMaintena
                     Tekrar: {alert.tekrarSayisi} • Ortalama dongu: {alert.ortalamaAralikGun} gun
                   </span>
                   <Link
-                    href={`/servisler?search=${encodeURIComponent(alert.tekneAdi)}`}
+                    href={`/is-emirleri?search=${encodeURIComponent(alert.tekneAdi)}`}
                     className="inline-flex items-center gap-1 text-sky-300 transition-colors hover:text-sky-200"
                   >
                     <CalendarClock className="h-3.5 w-3.5" />

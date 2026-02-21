@@ -25,7 +25,7 @@ function parsePage(value: string): number {
 }
 
 function parseRole(value: string): RoleFilter {
-  const normalized = value.trim().toUpperCase();
+  const normalized = value.trim().toLocaleUpperCase('tr-TR');
   if (normalized === 'TEKNISYEN') return 'TEKNISYEN';
   if (normalized === 'YETKILI') return 'YETKILI';
   return 'ALL';
@@ -40,9 +40,9 @@ function getPersonelDurum(aktif: boolean, aktifIsSayisi: number): PersonelDurum 
 
 function getDurumLabel(durum: PersonelDurum): string {
   if (durum === 'PASIF') return 'Pasif';
-  if (durum === 'MUSAIT') return 'Musait';
-  if (durum === 'PLANLI') return 'Planli';
-  return 'Yogun';
+  if (durum === 'MUSAIT') return 'Müsait';
+  if (durum === 'PLANLI') return 'Planlı';
+  return 'Yoğun';
 }
 
 function getDurumChipClass(durum: PersonelDurum): string {
@@ -58,9 +58,9 @@ function getRoleLabel(rol: string): string {
 
 function getUnvanLabel(unvan: string): string {
   if (unvan === 'usta') return 'Usta';
-  if (unvan === 'yonetici') return 'Yonetici';
+  if (unvan === 'yonetici') return 'Yönetici';
   if (unvan === 'ofis') return 'Ofis';
-  return 'Cirak';
+  return 'Çırak';
 }
 
 export default async function PersonnelPage({
@@ -139,14 +139,14 @@ export default async function PersonnelPage({
     <PageContent data-testid="personel-page">
       <PageHeader
         title="Personel"
-        description="Atama icin ekip yogunlugu ve acik is gorunumu"
+        description="Atama için ekip yoğunluğu ve açık iş görünümü"
         breadcrumbs={[
           { label: 'Operasyon', href: '/' },
           { label: 'Personel' },
         ]}
         rightActions={
-          <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
-            + Yeni Is Emri
+          <Link href="/is-emirleri/yeni" className="btn btn-primary h-10 px-4 py-2">
+            + Yeni İş Emri
           </Link>
         }
       />
@@ -165,7 +165,7 @@ export default async function PersonnelPage({
           </label>
 
           <select name="rol" defaultValue={roleFilter} className="form-select w-full">
-            <option value="ALL">Tum Roller</option>
+            <option value="ALL">Tüm Roller</option>
             <option value="TEKNISYEN">Teknisyen</option>
             <option value="YETKILI">Yetkili</option>
           </select>
@@ -190,9 +190,9 @@ export default async function PersonnelPage({
             <table className="w-full min-w-[860px] border-collapse">
               <thead>
                 <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-3 py-3">Isim</th>
+                  <th className="px-3 py-3">İsim</th>
                   <th className="px-3 py-3">Rol</th>
-                  <th className="px-3 py-3">Acik Is Sayisi</th>
+                  <th className="px-3 py-3">Açık İş Sayısı</th>
                   <th className="px-3 py-3">Guncel Durum</th>
                   <th className="px-3 py-3" />
                 </tr>
@@ -244,14 +244,14 @@ export default async function PersonnelPage({
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <p className="text-muted-foreground">
-            Toplam {total} kayit - Sayfa {page} / {totalPages}
+            Toplam {total} kayıt - Sayfa {page} / {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <Link
               href={`/personel?${prevQuery.toString()}`}
               className={`btn btn-secondary h-9 px-3 py-2 ${page <= 1 ? 'pointer-events-none opacity-60' : ''}`}
             >
-              Onceki
+              Önceki
             </Link>
             <Link
               href={`/personel?${nextQuery.toString()}`}

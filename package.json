@@ -8,6 +8,7 @@
         "build:strict": "next build",
         "start": "next start",
         "lint": "next lint",
+        "check:tr-ui": "tsx scripts/check-tr-ui.ts",
         "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
         "test": "node scripts/smoke-test.js",
         "test:unit": "tsx scripts/test-date-normalization.ts && tsx scripts/test-sync-metadata.ts && tsx scripts/test-operations-overview.ts",
@@ -36,6 +37,8 @@
         "seed": "tsx prisma/seed.ts"
     },
     "dependencies": {
+        "@ant-design/nextjs-registry": "^1.3.0",
+        "@ant-design/pro-components": "^2.8.10",
         "@fullcalendar/bootstrap5": "^6.1.20",
         "@fullcalendar/daygrid": "^6.1.20",
         "@fullcalendar/interaction": "^6.1.20",
@@ -55,6 +58,7 @@
         "@radix-ui/react-tabs": "^1.1.13",
         "@radix-ui/react-toast": "^1.2.15",
         "@tanstack/react-table": "^8.21.3",
+        "antd": "^5.29.3",
         "bcryptjs": "^3.0.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

@@ -63,7 +63,7 @@ export default function OperationsList({ operations, loading = false }: Operatio
           Bugünün Operasyonları
         </CardTitle>
         <Link
-          href="/servisler"
+          href="/is-emirleri"
           className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
         >
           Tümünü Gör →
@@ -86,7 +86,7 @@ export default function OperationsList({ operations, loading = false }: Operatio
             {operations.map((op) => (
               <Link
                 key={op.id}
-                href={`/servisler/${op.id}/duzenle`}
+                href={`/is-emirleri/${op.id}/duzenle`}
                 className="block group"
               >
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:bg-slate-800/50 hover:border-slate-600 transition-all">

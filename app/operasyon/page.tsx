@@ -1,5 +1,1 @@
-import { permanentRedirect } from 'next/navigation';
-
-export default function OperasyonRedirectPage() {
-  permanentRedirect('/takvim');
-}
+export { default } from '@/app/page';

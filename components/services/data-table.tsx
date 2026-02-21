@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -145,6 +145,7 @@ interface CompletePayload {
     fotograflarVar: boolean;
   };
   zorlukOverride: 'RUTIN' | 'ARIZA' | 'PROJE' | null;
+  kapanisOzeti: string;
 }
 
 type QueueCounts = Record<QueueFilter, number>;
@@ -1915,7 +1916,7 @@ export function DataTable({ columns, data, initialState, serverPagination }: Dat
                 <button
                   type="button"
                   className="flex-1 text-left"
-                  onClick={() => router.push(`/servisler/${service.id}`)}
+                  onClick={() => router.push(`/is-emirleri/${service.id}`)}
                 >
                   <p className="text-sm font-semibold">{service.tekneAdi}</p>
                   <p className="text-xs text-muted-foreground">{service.servisAciklamasi}</p>
@@ -1982,7 +1983,7 @@ export function DataTable({ columns, data, initialState, serverPagination }: Dat
                   className="cursor-pointer"
                   onClick={() => {
                     if (!row.getIsGrouped() && row.original.id) {
-                      router.push(`/servisler/${row.original.id}`);
+                      router.push(`/is-emirleri/${row.original.id}`);
                     }
                   }}
                 >

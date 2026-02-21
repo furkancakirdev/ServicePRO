@@ -5,7 +5,7 @@ import { CalendarPlus2, MessageCircleMore, Star } from 'lucide-react';
 
 const actions = [
   {
-    href: '/servisler/yeni',
+    href: '/is-emirleri/yeni',
     label: 'Yeni servis',
     helper: 'Hizli kayit',
     Icon: CalendarPlus2,

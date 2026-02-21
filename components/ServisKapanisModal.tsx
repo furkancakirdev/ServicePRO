@@ -56,6 +56,7 @@ interface CompletePayload {
   bonusPersonelIds: string[];
   kaliteKontrol: KaliteKontrol;
   zorlukOverride: Zorluk | null;
+  kapanisOzeti: string;
 }
 
 interface ServisKapanisModalProps {
@@ -261,6 +262,7 @@ export default function ServisKapanisModal({
           adamSaatMuaf: kalite.adamSaatExcludeFromScoring,
         },
         zorlukOverride: zorluk,
+        kapanisOzeti: servis.servisAciklamasi || 'Servis tamamlandı.',
       });
       onKapat();
     } finally {

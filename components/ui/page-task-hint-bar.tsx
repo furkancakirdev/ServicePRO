@@ -17,59 +17,59 @@ const ROUTE_HINTS: RouteHintConfig[] = [
     match: (pathname) => pathname === '/',
     hint: {
       id: 'home',
-      title: 'Bugunun onceliklerini kontrol et ve acik isleri hizli kapat.',
-      description: 'Ustteki ozet kartlarindan kritik durumu kontrol et, sonra listeye inip gorevi tamamla.',
+      title: 'Bugünün önceliklerini kontrol et ve açık işleri hızlı kapat.',
+      description: 'Üstteki özet kartlarından kritik durumu kontrol et, sonra listeye inip görevi tamamla.',
     },
-    action: { id: 'home-services', label: 'Servis listesine git', href: '/servisler' },
+    action: { id: 'home-services', label: 'İş emirlerine git', href: '/is-emirleri' },
   },
   {
-    match: (pathname) => pathname.startsWith('/servisler'),
+    match: (pathname) => pathname.startsWith('/is-emirleri') || pathname.startsWith('/is-emirleri'),
     hint: {
       id: 'services',
-      title: 'Filtrele, isi bul ve tek ekrandan durumu guncelle.',
-      description: 'Arama ve faceted filtreler tek blokta. Aktif filtre etiketlerini kontrol ederek hata yapmayin.',
+      title: 'Filtrele, işi bul ve tek ekrandan durumu güncelle.',
+      description: 'Arama ve filtreler tek blokta. Aktif filtre etiketlerini kontrol ederek hata yapmayın.',
     },
-    action: { id: 'services-new', label: 'Yeni servis kaydi', href: '/servisler/yeni' },
+    action: { id: 'services-new', label: 'Yeni iş emri', href: '/is-emirleri/yeni' },
   },
   {
     match: (pathname) => pathname.startsWith('/ayarlar'),
     hint: {
       id: 'settings',
-      title: 'Once sistem sagligini kontrol et, sonra gerekli ayari degistir.',
-      description: 'Sync islemlerini sadece ihtiyac oldugunda calistirin; dogrulama sonuclarini loglarda kontrol edin.',
+      title: 'Önce sistem sağlığını kontrol et, sonra gerekli ayarı değiştir.',
+      description: 'Eşitleme işlemlerini sadece ihtiyaç olduğunda çalıştır; doğrulama sonuçlarını kayıtlardan kontrol et.',
     },
   },
   {
     match: (pathname) => pathname.startsWith('/personel'),
     hint: {
       id: 'personnel',
-      title: 'Dogru personeli bul, atamayi ve unvani netlestir.',
-      description: 'Filtreyi secin, personel kartina girin ve servis sorumluluklarini kontrol edin.',
+      title: 'Doğru personeli bul, atamayı ve unvanı netleştir.',
+      description: 'Filtreyi seç, personel kartına gir ve servis sorumluluklarını kontrol et.',
     },
-    action: { id: 'personnel-root', label: 'Tum personeli gor', href: '/personel' },
+    action: { id: 'personnel-root', label: 'Tüm personeli gör', href: '/personel' },
   },
   {
     match: (pathname) => pathname.startsWith('/profile'),
     hint: {
       id: 'profile',
-      title: 'Hesap bilgilerini kontrol et, gerekirse sifreni hemen degistir.',
-      description: 'Sifre degisikliginde yeni sifrenin en az 8 karakter oldugundan emin olun.',
+      title: 'Hesap bilgilerini kontrol et, gerekirse şifreni hemen değiştir.',
+      description: 'Şifre değişikliğinde yeni şifrenin en az 8 karakter olduğundan emin ol.',
     },
   },
   {
     match: (pathname) => pathname.startsWith('/puanlama'),
     hint: {
       id: 'scoring',
-      title: 'Ayi sec, siralamayi incele ve eksik puanlama varsa tamamla.',
-      description: 'Aylik tabloda servis ve toplam puan kolonlarini birlikte okuyarak karar verin.',
+      title: 'Ayı seç, sıralamayı incele ve eksik puanlama varsa tamamla.',
+      description: 'Aylık tabloda servis ve toplam puan sütunlarını birlikte okuyarak karar ver.',
     },
   },
   {
     match: (pathname) => pathname.startsWith('/raporlar'),
     hint: {
       id: 'reports',
-      title: 'Ilk bakista trendi gor, sonra gerekli raporu disari aktar.',
-      description: 'Filtreleri degistirdikten sonra tablo ve rozet ozetini ayni ekranda karsilastirin.',
+      title: 'İlk bakışta trendi gör, sonra gerekli raporu dışa aktar.',
+      description: 'Filtreleri değiştirdikten sonra tablo ve rozet özetini aynı ekranda karşılaştır.',
     },
   },
 ];
@@ -87,7 +87,7 @@ export function PageTaskHintBar() {
     return (
       <div className="mb-4 flex justify-end">
         <Button variant="outline" size="sm" onClick={() => setHintsVisible(true)}>
-          Ipuclarini tekrar goster
+          İpuçlarını tekrar göster
         </Button>
       </div>
     );

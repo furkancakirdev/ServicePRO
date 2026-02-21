@@ -101,13 +101,13 @@ export function LeadsBoard() {
         });
         const payload = (await response.json().catch(() => null)) as LeadListResponse | null;
         if (!response.ok) {
-          throw new Error(parseError(payload, 'Lead listesi getirilemedi'));
+          throw new Error(parseError(payload, 'Talep listesi getirilemedi'));
         }
 
         setLeads(payload?.leads ?? []);
         setError(null);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Lead listesi getirilemedi');
+        setError(loadError instanceof Error ? loadError.message : 'Talep listesi getirilemedi');
       } finally {
         if (silent) {
           setRefreshing(false);
@@ -145,16 +145,16 @@ export function LeadsBoard() {
       });
       const payload = (await response.json().catch(() => null)) as LeadRecord | null;
       if (!response.ok) {
-        throw new Error(parseError(payload, 'Lead olusturulamadi'));
+        throw new Error(parseError(payload, 'Talep oluşturulamadı'));
       }
 
       if (payload) {
         setLeads((current) => [payload, ...current]);
       }
       setCreateForm(buildCreateDefaults());
-      toast.success('Lead olusturuldu');
+      toast.success('Talep oluşturuldu');
     } catch (createError) {
-      toast.error(createError instanceof Error ? createError.message : 'Lead olusturulamadi');
+      toast.error(createError instanceof Error ? createError.message : 'Talep oluşturulamadı');
     } finally {
       setCreating(false);
     }
@@ -189,7 +189,7 @@ export function LeadsBoard() {
       const data = (await response.json().catch(() => null)) as LeadRecord | null;
       if (!response.ok) {
         setLeads(previous);
-        throw new Error(parseError(data, 'Lead guncellenemedi'));
+        throw new Error(parseError(data, 'Talep güncellenemedi'));
       }
 
       if (data) {
@@ -197,9 +197,9 @@ export function LeadsBoard() {
           current.map((item) => (item.id === lead.id ? { ...item, ...data } : item))
         );
       }
-      toast.success('Lead guncellendi');
+      toast.success('Talep güncellendi');
     } catch (updateError) {
-      toast.error(updateError instanceof Error ? updateError.message : 'Lead guncellenemedi');
+      toast.error(updateError instanceof Error ? updateError.message : 'Talep güncellenemedi');
     } finally {
       setBusy(lead.id, false);
     }
@@ -237,7 +237,7 @@ export function LeadsBoard() {
 
       if (!response.ok) {
         setLeads(previous);
-        throw new Error(parseError(payload, 'Lead joba donusturulemedi'));
+        throw new Error(parseError(payload, 'Talep iş emrine dönüştürülemedi'));
       }
 
       if (payload?.lead) {
@@ -246,9 +246,9 @@ export function LeadsBoard() {
         );
       }
 
-      toast.success('Lead joba donusturuldu');
+      toast.success('Talep iş emrine dönüştürüldü');
     } catch (convertError) {
-      toast.error(convertError instanceof Error ? convertError.message : 'Lead joba donusturulemedi');
+      toast.error(convertError instanceof Error ? convertError.message : 'Talep iş emrine dönüştürülemedi');
     } finally {
       setBusy(lead.id, false);
     }
@@ -271,13 +271,13 @@ export function LeadsBoard() {
   }, [leads]);
 
   if (loading) {
-    return <PageLoadingState label="Lead pipeline yukleniyor..." />;
+    return <PageLoadingState label="Talep panosu yükleniyor..." />;
   }
 
   if (error) {
     return (
       <PageErrorState
-        title="Lead verisi yuklenemedi"
+        title="Talep verisi yüklenemedi"
         description={error}
         onRetry={() => void loadLeads()}
       />
@@ -323,7 +323,7 @@ export function LeadsBoard() {
       </div>
 
       <div className="surface-panel space-y-4 p-4" data-testid="leads-create-form">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Yeni Lead</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Yeni Talep</h3>
         <div className="grid gap-3 lg:grid-cols-3">
           <Input
             placeholder="Ad"
@@ -382,14 +382,14 @@ export function LeadsBoard() {
           <div className="flex items-end justify-end">
             <Button onClick={() => void handleCreateLead()} disabled={creating} data-testid="leads-create-submit">
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Lead Olustur
+              Talep Oluştur
             </Button>
           </div>
         </div>
       </div>
 
       {leads.length === 0 ? (
-        <PageEmptyState title="Lead kaydi yok" description="Yeni lead ekleyerek baslayin." />
+        <PageEmptyState title="Talep kaydı yok" description="Yeni talep ekleyerek başlayın." />
       ) : (
         <div className="grid gap-4 xl:grid-cols-5" data-testid="leads-pipeline">
           {LEAD_STATUS_OPTIONS.map((status) => (
@@ -454,10 +454,10 @@ export function LeadsBoard() {
                           disabled={busySet.has(lead.id) || lead.status === 'KAZANILDI'}
                           data-testid={`lead-convert-job-${lead.id}`}
                         >
-                          Joba Donustur
+                          İş Emrine Dönüştür
                         </Button>
                         <Button asChild size="sm" variant="outline">
-                          <Link href="/calls">Bookingler</Link>
+                          <Link href={`/talepler/${lead.id}`}>Detay</Link>
                         </Button>
                       </div>
 

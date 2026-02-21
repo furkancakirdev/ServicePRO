@@ -32,6 +32,11 @@ const completeRequestSchema = z.object({
     fotograflarVar: z.boolean(),
   }),
   zorlukOverride: z.enum(['RUTIN', 'ARIZA', 'PROJE']).optional(),
+  kapanisOzeti: z
+    .string()
+    .trim()
+    .min(5, 'Kapanış özeti zorunludur')
+    .max(5000, 'Kapanış özeti çok uzun'),
 });
 
 const ZORLUK_CARPANLARI: Record<'RUTIN' | 'ARIZA' | 'PROJE', number> = {
@@ -214,7 +219,7 @@ export async function POST(request: Request, { params }: RouteContext) {
           adamSaat: body.kaliteKontrol.adamSaatVar,
           saatiOlmayanUnitePuanDisi: uniteSaatiExcluded,
           adamSaatUygulanmazPuanDisi: adamSaatExcluded,
-          aciklama: service.servisAciklamasi || '-',
+          aciklama: body.kapanisOzeti,
           raporlayanPersonel: auth.payload.email || auth.payload.userId,
           raporTarihi: new Date(),
         },
@@ -229,7 +234,7 @@ export async function POST(request: Request, { params }: RouteContext) {
           stokMalzeme: false,
           saatiOlmayanUnitePuanDisi: uniteSaatiExcluded,
           adamSaatUygulanmazPuanDisi: adamSaatExcluded,
-          aciklama: service.servisAciklamasi || '-',
+          aciklama: body.kapanisOzeti,
           raporlayanPersonel: auth.payload.email || auth.payload.userId,
           raporTarihi: new Date(),
         },
@@ -256,7 +261,7 @@ export async function POST(request: Request, { params }: RouteContext) {
           islemTuru: 'COMPLETE',
           entityTipi: 'Service',
           entityId: service.id,
-          detay: 'Servis tamamlandı ve puanlar işlendi',
+          detay: `Servis tamamlandı. Özet: ${body.kapanisOzeti.slice(0, 240)}`,
         },
       });
     });

@@ -30,7 +30,7 @@ function locationLabel(value: string): string {
   const normalized = getLokasyonGroupFromFields(value, value);
   if (normalized === 'YATMARIN') return 'Yatmarin';
   if (normalized === 'NETSEL') return 'Netsel';
-  return 'Dis Servis';
+  return 'D?? Servis';
 }
 
 export default async function BoatProfilePage({
@@ -152,10 +152,10 @@ export default async function BoatProfilePage({
               Listeye Don
             </Link>
             <Link
-              href={`/servisler/yeni?boatName=${encodeURIComponent(tekne.ad)}`}
+              href={`/is-emirleri/yeni?boatName=${encodeURIComponent(tekne.ad)}`}
               className="btn btn-primary h-10 px-4 py-2"
             >
-              + Bu Tekneye Is Emri
+              + Bu Tekneye ?? Emri
             </Link>
           </>
         }
@@ -228,7 +228,7 @@ export default async function BoatProfilePage({
         </div>
         {openServices.length === 0 ? (
           <PageEmptyState
-            title="Acik is emri bulunamadi"
+            title="A??k i? emri bulunamad?"
             description="Bu tekneye ait aktif servis kaydi yok."
             className="min-h-[160px]"
           />
@@ -239,13 +239,13 @@ export default async function BoatProfilePage({
               return (
                 <Link
                   key={service.id}
-                  href={`/servisler/${service.id}`}
+                  href={`/is-emirleri/${service.id}`}
                   className="rounded-md border border-border/70 p-3 transition hover:border-primary/60 hover:bg-muted/20"
                   data-testid={`tekne-open-service-link-${service.id}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="line-clamp-1 text-sm font-medium text-foreground">
-                      {service.servisAciklamasi || 'Servis Kaydi'}
+                      {service.servisAciklamasi || 'Servis Kayd?'}
                     </p>
                     <span className={cn('rounded-full px-2 py-0.5 text-[11px]', status.bgColor, status.color)}>
                       {status.label}
@@ -265,12 +265,12 @@ export default async function BoatProfilePage({
       <section className="surface-panel p-4" data-testid="tekne-history-list">
         <div className="mb-3 flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Servis Gecmisi</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Servis Ge?mi?i</h2>
         </div>
 
         {historyServices.length === 0 ? (
           <PageEmptyState
-            title="Servis gecmisi bulunamadi"
+            title="Servis ge?mi?i bulunamad?"
             description="Bu tekne icin servis kaydi olustugunda burada listelenir."
             className="min-h-[180px]"
           />
@@ -281,7 +281,7 @@ export default async function BoatProfilePage({
                 <thead>
                   <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-3 py-3">Tarih</th>
-                    <th className="px-3 py-3">Aciklama</th>
+                    <th className="px-3 py-3">A??klama</th>
                     <th className="px-3 py-3">Durum</th>
                     <th className="px-3 py-3">Lokasyon</th>
                     <th className="px-3 py-3" />
@@ -308,11 +308,11 @@ export default async function BoatProfilePage({
                         <td className="px-3 py-3">{service.yer || service.adres || '-'}</td>
                         <td className="px-3 py-3 text-right">
                           <Link
-                            href={`/servisler/${service.id}`}
+                            href={`/is-emirleri/${service.id}`}
                             className="btn btn-secondary h-8 px-3 py-1 text-xs"
                             data-testid={`tekne-history-open-service-${service.id}`}
                           >
-                            Is Emrini Ac
+                            ?? Emrini A?
                           </Link>
                         </td>
                       </tr>
@@ -324,7 +324,7 @@ export default async function BoatProfilePage({
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
               <p className="text-muted-foreground">
-                Toplam {historyCount} kayit • Sayfa {historyPage} / {historyTotalPages}
+                Toplam {historyCount} kay?t ? Sayfa {historyPage} / {historyTotalPages}
               </p>
               <div className="flex items-center gap-2">
                 <Link
@@ -354,3 +354,5 @@ export default async function BoatProfilePage({
     </PageContent>
   );
 }
+
+

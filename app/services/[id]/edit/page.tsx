@@ -5,6 +5,5 @@ export default function ServiceEditRedirectPage({
 }: {
   params: { id: string };
 }) {
-  redirect(`/servisler/${params.id}/duzenle`);
+  redirect(`/is-emirleri/${params.id}/edit`);
 }
-

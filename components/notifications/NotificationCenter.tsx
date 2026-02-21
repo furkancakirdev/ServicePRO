@@ -30,10 +30,10 @@ type NotificationsResponse = {
 };
 
 const STATUS_OPTIONS: Array<{ value: NotificationFilter; label: string }> = [
-  { value: 'ALL', label: 'Tum bildirimler' },
+  { value: 'ALL', label: 'Tüm bildirimler' },
   { value: 'YENI', label: 'Yeni' },
   { value: 'OKUNDU', label: 'Okundu' },
-  { value: 'ARSIV', label: 'Arsiv' },
+  { value: 'ARSIV', label: 'Arşiv' },
 ];
 
 function getAuthHeaders(): Record<string, string> {
@@ -138,7 +138,7 @@ export function NotificationCenter() {
         });
         const payload = (await response.json().catch(() => null)) as NotificationRecord | null;
         if (!response.ok) {
-          throw new Error(parseError(payload, 'Bildirim okundu yapilamadi'));
+          throw new Error(parseError(payload, 'Bildirim okundu yapılamadı'));
         }
 
         updateNotification(notification.id, {
@@ -151,7 +151,7 @@ export function NotificationCenter() {
           readCount: current.readCount + 1,
         }));
       } catch (actionError) {
-        toast.error(actionError instanceof Error ? actionError.message : 'Bildirim okundu yapilamadi');
+        toast.error(actionError instanceof Error ? actionError.message : 'Bildirim okundu yapılamadı');
       } finally {
         setBusy(false);
       }
@@ -172,7 +172,7 @@ export function NotificationCenter() {
         });
         const payload = (await response.json().catch(() => null)) as NotificationRecord | null;
         if (!response.ok) {
-          throw new Error(parseError(payload, 'Bildirim arsivlenemedi'));
+          throw new Error(parseError(payload, 'Bildirim arşivlenemedi'));
         }
 
         updateNotification(notification.id, {
@@ -194,7 +194,7 @@ export function NotificationCenter() {
           }));
         }
       } catch (actionError) {
-        toast.error(actionError instanceof Error ? actionError.message : 'Bildirim arsivlenemedi');
+        toast.error(actionError instanceof Error ? actionError.message : 'Bildirim arşivlenemedi');
       } finally {
         setBusy(false);
       }
@@ -214,7 +214,7 @@ export function NotificationCenter() {
       });
       const payload = (await response.json().catch(() => null)) as { updatedCount?: number; error?: string } | null;
       if (!response.ok) {
-        throw new Error(parseError(payload, 'Tum bildirimler okundu yapilamadi'));
+        throw new Error(parseError(payload, 'Tüm bildirimler okundu yapılamadı'));
       }
 
       const readAt = new Date().toISOString();
@@ -227,22 +227,22 @@ export function NotificationCenter() {
         unreadCount: 0,
         readCount: current.readCount + (payload?.updatedCount ?? 0),
       }));
-      toast.success('Tum bildirimler okundu olarak isaretlendi');
+      toast.success('Tüm bildirimler okundu olarak işaretlendi');
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : 'Tum bildirimler okundu yapilamadi');
+      toast.error(actionError instanceof Error ? actionError.message : 'Tüm bildirimler okundu yapılamadı');
     } finally {
       setBusy(false);
     }
   }, []);
 
   if (loading) {
-    return <PageLoadingState label="Bildirimler yukleniyor..." />;
+    return <PageLoadingState label="Bildirimler yükleniyor..." />;
   }
 
   if (error) {
     return (
       <PageErrorState
-        title="Bildirimler yuklenemedi"
+        title="Bildirimler yüklenemedi"
         description={error}
         onRetry={() => void loadNotifications()}
       />
@@ -267,7 +267,7 @@ export function NotificationCenter() {
               <p className="font-semibold text-foreground">{summary.readCount}</p>
             </div>
             <div className="rounded-md border border-border/70 px-3 py-2 text-sm">
-              <p className="text-xs text-muted-foreground">Arsiv</p>
+              <p className="text-xs text-muted-foreground">Arşiv</p>
               <p className="font-semibold text-foreground">{summary.archivedCount}</p>
             </div>
           </div>
@@ -306,7 +306,7 @@ export function NotificationCenter() {
               disabled={busy || summary.unreadCount === 0}
               data-testid="notifications-read-all"
             >
-              Tumunu okundu yap
+              Tümünü okundu yap
             </Button>
           </div>
         </div>
@@ -316,7 +316,7 @@ export function NotificationCenter() {
         {sorted.length === 0 ? (
           <PageEmptyState
             title="Bildirim bulunmuyor"
-            description="Yeni bir aksiyon olustugunda burada gorunecek."
+            description="Yeni bir aksiyon oluştuğunda burada görünecek."
           />
         ) : (
           <Table>
@@ -324,7 +324,7 @@ export function NotificationCenter() {
               <TableRow>
                 <TableHead>Tarih</TableHead>
                 <TableHead>Durum</TableHead>
-                <TableHead>Baslik</TableHead>
+                <TableHead>Başlık</TableHead>
                 <TableHead>Mesaj</TableHead>
                 <TableHead>Aksiyon</TableHead>
               </TableRow>
@@ -358,11 +358,11 @@ export function NotificationCenter() {
                         disabled={busy || item.status === 'ARSIV'}
                         data-testid={`notification-archive-${item.id}`}
                       >
-                        Arsivle
+                        Arşivle
                       </Button>
                       {item.actionUrl ? (
                         <Button asChild size="sm" variant="secondary">
-                          <Link href={item.actionUrl}>Kaydi Ac</Link>
+                          <Link href={item.actionUrl}>Kaydı Aç</Link>
                         </Button>
                       ) : null}
                     </div>

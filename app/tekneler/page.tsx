@@ -25,7 +25,7 @@ function parsePage(value: string): number {
 }
 
 function parseLocationFilter(value: string): LocationFilter {
-  const normalized = value.trim().toUpperCase();
+  const normalized = value.trim().toLocaleUpperCase('tr-TR');
   if (normalized === 'YATMARIN') return 'YATMARIN';
   if (normalized === 'NETSEL') return 'NETSEL';
   if (normalized === 'DIS_SERVIS') return 'DIS_SERVIS';
@@ -58,7 +58,7 @@ function locationLabel(value: string): string {
   const normalized = getLokasyonGroupFromFields(value, value);
   if (normalized === 'YATMARIN') return 'Yatmarin';
   if (normalized === 'NETSEL') return 'Netsel';
-  return 'Dis Servis';
+  return 'Dış Servis';
 }
 
 export default async function BoatsPage({
@@ -149,14 +149,14 @@ export default async function BoatsPage({
     <PageContent data-testid="tekneler-page">
       <PageHeader
         title="Tekneler"
-        description="Tekne profilleri, acik isler ve servis gecmisi"
+        description="Tekne profilleri, açık işler ve servis geçmişi"
         breadcrumbs={[
           { label: 'Operasyon', href: '/' },
           { label: 'Tekneler' },
         ]}
         rightActions={
-          <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
-            + Yeni Is Emri
+          <Link href="/is-emirleri/yeni" className="btn btn-primary h-10 px-4 py-2">
+            + Yeni İş Emri
           </Link>
         }
       />
@@ -175,10 +175,10 @@ export default async function BoatsPage({
           </label>
 
           <select name="konum" defaultValue={locationFilter} className="form-select w-full">
-            <option value="ALL">Tum Lokasyonlar</option>
+            <option value="ALL">Tüm Lokasyonlar</option>
             <option value="YATMARIN">Yatmarin</option>
             <option value="NETSEL">Netsel</option>
-            <option value="DIS_SERVIS">Dis Servis</option>
+            <option value="DIS_SERVIS">Dış Servis</option>
           </select>
 
           <button type="submit" className="btn btn-secondary h-10 px-4 py-2">
@@ -188,7 +188,7 @@ export default async function BoatsPage({
 
         {boats.length === 0 ? (
           <PageEmptyState
-            title={query ? 'Aramaya uygun tekne bulunamadi' : 'Aktif tekne kaydi bulunamadi'}
+            title={query ? 'Aramaya uygun tekne bulunamadı' : 'Aktif tekne kaydı bulunamadı'}
             description="Filtreleri temizleyip tekrar deneyebilirsiniz."
             action={
               <Link href="/tekneler" className="btn btn-secondary h-9 px-4 py-2">
@@ -201,10 +201,10 @@ export default async function BoatsPage({
             <table className="w-full min-w-[860px] border-collapse">
               <thead>
                 <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-3 py-3">Tekne Adi</th>
+                  <th className="px-3 py-3">Tekne Adı</th>
                   <th className="px-3 py-3">Lokasyon</th>
                   <th className="px-3 py-3">Son Servis</th>
-                  <th className="px-3 py-3">Acik Is Sayisi</th>
+                  <th className="px-3 py-3">Açık İş Sayısı</th>
                   <th className="px-3 py-3" />
                 </tr>
               </thead>
@@ -244,7 +244,7 @@ export default async function BoatsPage({
                           className="btn btn-secondary h-8 px-3 py-1 text-xs"
                           data-testid={`tekne-open-profile-${boat.id}`}
                         >
-                          Profili Ac
+                          Profili Aç
                         </Link>
                       </td>
                     </tr>
@@ -257,14 +257,14 @@ export default async function BoatsPage({
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <p className="text-muted-foreground">
-            Toplam {total} kayit • Sayfa {page} / {totalPages}
+            Toplam {total} kayıt • Sayfa {page} / {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <Link
               href={`/tekneler?${prevQuery.toString()}`}
               className={`btn btn-secondary h-9 px-3 py-2 ${page <= 1 ? 'pointer-events-none opacity-60' : ''}`}
             >
-              Onceki
+              Önceki
             </Link>
             <Link
               href={`/tekneler?${nextQuery.toString()}`}

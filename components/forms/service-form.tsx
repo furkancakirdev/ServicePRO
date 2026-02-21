@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -161,6 +161,7 @@ interface CompletePayload {
     fotograflarVar: boolean;
   };
   zorlukOverride: 'RUTIN' | 'ARIZA' | 'PROJE' | null;
+  kapanisOzeti: string;
 }
 
 export interface ServiceFormProps {
@@ -811,7 +812,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
           onClick: () => router.push(`/raporlar/whatsapp?serviceId=${servisId}`),
         },
       });
-      router.push(`/servisler/${servisId}/duzenle`);
+      router.push(`/is-emirleri/${servisId}/duzenle`);
       router.refresh();
     },
     [router]
@@ -833,7 +834,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
       setCurrentService(saved);
 
       toast.success(mode === 'create' ? 'Servis oluşturuldu.' : 'Servis güncellendi.');
-      router.push(`/servisler/${saved.id}/duzenle`);
+      router.push(`/is-emirleri/${saved.id}/duzenle`);
       router.refresh();
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : 'İşlem başarısız';

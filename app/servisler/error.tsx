@@ -13,10 +13,10 @@ export default function ServislerError({
 }) {
   return (
     <PageContent>
-      <PageHeader title="Is Emirleri" description="Arama ve filtreleme" />
+      <PageHeader title="İş Emirleri" description="Arama ve filtreleme" />
       <PageErrorState
-        title="Is emirleri acilirken hata olustu"
-        description={error.message || 'Lutfen tekrar deneyin.'}
+        title="İş emirleri açılırken hata oluştu"
+        description={error.message || 'Lütfen tekrar deneyin.'}
         onRetry={reset}
       />
     </PageContent>

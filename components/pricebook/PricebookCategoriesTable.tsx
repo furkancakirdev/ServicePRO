@@ -139,7 +139,7 @@ export function PricebookCategoriesTable() {
 
     const sira = Number(form.sira);
     if (!Number.isInteger(sira) || sira < 0) {
-      toast.error('Sira alaný 0 veya daha buyuk tam sayi olmalidir');
+      toast.error('Sira alanÄ± 0 veya daha buyuk tam sayi olmalidir');
       return;
     }
 
@@ -229,7 +229,7 @@ export function PricebookCategoriesTable() {
             <Label htmlFor="pricebook-category-search">Kategori ara</Label>
             <Input
               id="pricebook-category-search"
-              placeholder="Kategori adi"
+              placeholder="Kategori adÄ±"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               data-testid="pricebook-categories-search"
@@ -253,7 +253,7 @@ export function PricebookCategoriesTable() {
             <Input
               value={form.ad}
               onChange={(event) => setForm((current) => ({ ...current, ad: event.target.value }))}
-              placeholder="Kategori adý"
+              placeholder="Kategori adÄ±"
               data-testid="pricebook-category-form-ad"
             />
           </div>
@@ -382,3 +382,4 @@ export function PricebookCategoriesTable() {
 }
 
 export default PricebookCategoriesTable;
+

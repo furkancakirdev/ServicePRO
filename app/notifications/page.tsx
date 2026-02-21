@@ -6,11 +6,11 @@ export default function NotificationsPage() {
   return (
     <PageContent data-testid="notifications-page">
       <PageHeader
-        title="Notification Center"
-        description="In-app bildirimleri goruntule, okundu yap ve arsivle"
+        title="Bildirim Merkezi"
+        description="Uygulama içi bildirimleri görüntüle, okundu yap ve arşivle"
         breadcrumbs={[
-          { label: 'Operasyon', href: '/' },
-          { label: 'Notifications' },
+          { label: 'Operasyon', href: '/operasyon' },
+          { label: 'Bildirimler' },
         ]}
       />
 

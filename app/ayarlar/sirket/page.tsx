@@ -1,6 +1,5 @@
-﻿import { permanentRedirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
-export default function SirketRedirectPage() {
+export default function LegacyAyarlarRedirectPage() {
   permanentRedirect('/ayarlar');
 }
-

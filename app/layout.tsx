@@ -2,8 +2,11 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Playfair_Display, Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
+import { AntdRegistry } from '@ant-design/nextjs-registry';
 import './globals.css';
-import AppShell from '@/components/app-shell';
+import 'antd/dist/reset.css';
+import AppShell from '@/components/layout/AppShell';
+import AntdProvider from '@/components/providers/antd-provider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import { UiRedesignProvider } from '@/components/ui/ui-redesign-provider';
@@ -26,9 +29,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'ServicePro | Tekne Teknik Servis Yonetimi',
+  title: 'ServicePro | Tekne Teknik Servis Yönetimi',
   description:
-    'Marlin Yatcilik teknik servis birimi icin servis takibi, personel yonetimi ve performans puanlama sistemi.',
+    'Marlin Yatçılık teknik servis birimi için servis takibi, personel yönetimi ve performans puanlama sistemi.',
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
@@ -42,25 +45,29 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <body className={`${playfairDisplay.variable} ${inter.variable} min-h-screen bg-background text-foreground`}>
-        <ThemeProvider>
-          <AuthProvider>
-            <UiRedesignProvider>
-              <AppShell>{children}</AppShell>
-              <Toaster
-                position="top-right"
-                richColors
-                closeButton
-                toastOptions={{
-                  style: {
-                    background: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text)',
-                  },
-                }}
-              />
-            </UiRedesignProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AntdRegistry>
+          <AntdProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <UiRedesignProvider>
+                  <AppShell>{children}</AppShell>
+                  <Toaster
+                    position="top-right"
+                    richColors
+                    closeButton
+                    toastOptions={{
+                      style: {
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      },
+                    }}
+                  />
+                </UiRedesignProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </AntdProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

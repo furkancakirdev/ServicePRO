@@ -57,7 +57,7 @@ export default function RecentServices() {
     <section className="surface-panel p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-base font-semibold text-slate-100">Bugunku servisler</h3>
-        <Link href="/servisler" className="text-xs font-semibold text-sky-300 hover:text-sky-200">
+        <Link href="/is-emirleri" className="text-xs font-semibold text-sky-300 hover:text-sky-200">
           Tumunu gor
         </Link>
       </div>

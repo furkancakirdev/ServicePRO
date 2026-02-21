@@ -9,20 +9,20 @@ export default function TakvimPage() {
     <PageContent data-testid="takvim-page">
       <PageHeader
         title="Takvim Planlama"
-        description="Teknisyen bazli dispatch planlama"
+        description="Gün ve hafta görünümünde yalnızca tarih planlaması"
         breadcrumbs={[
-          { label: 'Operasyon', href: '/' },
+          { label: 'Operasyon', href: '/operasyon' },
           { label: 'Takvim' },
         ]}
         rightActions={
           <>
-            <Link href="/servisler" className="btn btn-secondary h-10 px-4 py-2">
+            <Link href="/is-emirleri" className="btn btn-secondary h-10 px-4 py-2">
               <CalendarDays className="mr-2 h-4 w-4" />
-              Listeye Don
+              Listeye Dön
             </Link>
-            <Link href="/servisler/yeni" className="btn btn-primary h-10 px-4 py-2">
+            <Link href="/is-emirleri/yeni" className="btn btn-primary h-10 px-4 py-2">
               <Plus className="mr-2 h-4 w-4" />
-              Yeni Is Emri
+              Yeni İş Emri
             </Link>
           </>
         }
