@@ -58,9 +58,17 @@ const DURUM_SECENEKLERI = [
 ];
 
 const ONCELIK_SECENEKLERI = [
+  { value: 'ALL', label: 'Tümü' },
   { value: 'YUKSEK', label: 'Yüksek' },
   { value: 'ORTA', label: 'Orta' },
   { value: 'DUSUK', label: 'Düşük' },
+];
+
+const LOKASYON_SECENEKLERI = [
+  { value: 'ALL', label: 'Tümü' },
+  { value: 'YATMARIN', label: 'Yatmarin' },
+  { value: 'NETSEL', label: 'Netsel' },
+  { value: 'DIS_SERVIS', label: 'Dış Servis' },
 ];
 
 const GORUNUM_SECENEKLERI: Array<{ value: GorunumFiltresi; label: string }> = [
@@ -179,7 +187,9 @@ export function IsEmirleriProTable() {
 
   const [mesajApi, mesajBaglami] = message.useMessage();
   const [aramaMetni, setAramaMetni] = useState(searchParams.get('q') ?? '');
-  const [durumFiltresi, setDurumFiltresi] = useState(searchParams.get('durum') ?? '');
+  const [durumFiltresi, setDurumFiltresi] = useState<string[]>(
+    searchParams.get('durum')?.split(',').filter(Boolean) ?? []
+  );
   const [oncelikFiltresi, setOncelikFiltresi] = useState(searchParams.get('oncelik') ?? '');
   const [lokasyonFiltresi, setLokasyonFiltresi] = useState(searchParams.get('lokasyon') ?? '');
   const [gorunumFiltresi, setGorunumFiltresi] = useState<GorunumFiltresi>(
@@ -188,7 +198,7 @@ export function IsEmirleriProTable() {
 
   useEffect(() => {
     setAramaMetni(searchParams.get('q') ?? '');
-    setDurumFiltresi(searchParams.get('durum') ?? '');
+    setDurumFiltresi(searchParams.get('durum')?.split(',').filter(Boolean) ?? []);
     setOncelikFiltresi(searchParams.get('oncelik') ?? '');
     setLokasyonFiltresi(searchParams.get('lokasyon') ?? '');
     setGorunumFiltresi(parseGorunum(searchParams.get('gorunum')));
@@ -197,14 +207,14 @@ export function IsEmirleriProTable() {
   const applyFiltersToUrl = useCallback(
     (next: {
       q?: string;
-      durum?: string;
+      durum?: string[];
       oncelik?: string;
       lokasyon?: string;
       gorunum?: GorunumFiltresi;
     }) => {
       const params = new URLSearchParams(searchParams.toString());
       const q = (next.q ?? '').trim();
-      const durum = (next.durum ?? '').trim();
+      const durum = next.durum ?? [];
       const oncelik = (next.oncelik ?? '').trim();
       const lokasyon = (next.lokasyon ?? '').trim();
       const gorunum = next.gorunum ?? 'HEPSI';
@@ -212,7 +222,7 @@ export function IsEmirleriProTable() {
       if (q) params.set('q', q);
       else params.delete('q');
 
-      if (durum) params.set('durum', durum);
+      if (durum.length > 0) params.set('durum', durum.join(','));
       else params.delete('durum');
 
       if (oncelik) params.set('oncelik', oncelik);
@@ -243,13 +253,13 @@ export function IsEmirleriProTable() {
 
   const handleFilterReset = useCallback(() => {
     setAramaMetni('');
-    setDurumFiltresi('');
+    setDurumFiltresi([]);
     setOncelikFiltresi('');
     setLokasyonFiltresi('');
     setGorunumFiltresi('HEPSI');
     applyFiltersToUrl({
       q: '',
-      durum: '',
+      durum: [],
       oncelik: '',
       lokasyon: '',
       gorunum: 'HEPSI',
@@ -355,8 +365,9 @@ export function IsEmirleriProTable() {
           const query = new URLSearchParams();
           query.set('limit', '500');
           if (aramaMetni.trim()) query.set('q', aramaMetni.trim());
-          if (durumFiltresi) query.set('durum', durumFiltresi);
-          if (lokasyonFiltresi) query.set('adresGroup', lokasyonFiltresi);
+          if (lokasyonFiltresi && lokasyonFiltresi !== 'ALL') {
+            query.set('adresGroup', lokasyonFiltresi);
+          }
 
           const response = await fetch(`/api/services?${query.toString()}`, {
             cache: 'no-store',
@@ -370,11 +381,25 @@ export function IsEmirleriProTable() {
             return { data: [], success: false, total: 0 };
           }
 
-          const rows = (payload?.services ?? []).map(satiraDonustur);
-          const gorunumFiltreli = gorunumeGoreFiltrele(rows, gorunumFiltresi);
-          const oncelikFiltreli = oncelikFiltresi
-            ? gorunumFiltreli.filter((item) => item.oncelik === oncelikFiltresi)
-            : gorunumFiltreli;
+          let rows = (payload?.services ?? []).map(satiraDonustur);
+
+          // Görünüm filtreleri
+          rows = gorunumeGoreFiltrele(rows, gorunumFiltresi);
+
+          // Durum filtresi - multi-select
+          if (durumFiltresi.length > 0) {
+            rows = rows.filter((item) => durumFiltresi.includes(item.durum));
+          }
+
+          // Öncelik filtresi - "Tümü" hariç
+          if (oncelikFiltresi && oncelikFiltresi !== 'ALL') {
+            rows = rows.filter((item) => item.oncelik === oncelikFiltresi);
+          }
+
+          // Lokasyon filtresi - "Tümü" hariç
+          if (lokasyonFiltresi && lokasyonFiltresi !== 'ALL') {
+            rows = rows.filter((item) => item.lokasyonGrubu === lokasyonFiltresi);
+          }
 
           const current = Number(params.current ?? 1);
           const pageSize = Number(params.pageSize ?? 20);
@@ -382,9 +407,9 @@ export function IsEmirleriProTable() {
           const end = start + pageSize;
 
           return {
-            data: oncelikFiltreli.slice(start, end),
+            data: rows.slice(start, end),
             success: true,
-            total: oncelikFiltreli.length,
+            total: rows.length,
           };
         }}
         toolBarRender={() => [
@@ -394,22 +419,24 @@ export function IsEmirleriProTable() {
               allowClear
               placeholder="Tekne, açıklama veya adres ara"
               prefix={<SearchOutlined />}
-              style={{ width: 280 }}
+              style={{ width: 200 }}
               onChange={(event) => setAramaMetni(event.target.value)}
               onPressEnter={handleFilterApply}
             />
             <Select
+              mode="multiple"
               allowClear
               placeholder="Durum"
-              style={{ width: 190 }}
-              value={durumFiltresi || undefined}
+              style={{ width: 200 }}
+              value={durumFiltresi}
               options={DURUM_SECENEKLERI}
-              onChange={(value) => setDurumFiltresi(value ?? '')}
+              onChange={(value) => setDurumFiltresi(value as string[])}
+              maxTagCount="responsive"
             />
             <Select
               allowClear
               placeholder="Öncelik"
-              style={{ width: 130 }}
+              style={{ width: 120 }}
               value={oncelikFiltresi || undefined}
               options={ONCELIK_SECENEKLERI}
               onChange={(value) => setOncelikFiltresi(value ?? '')}
@@ -417,13 +444,9 @@ export function IsEmirleriProTable() {
             <Select
               allowClear
               placeholder="Lokasyon"
-              style={{ width: 150 }}
+              style={{ width: 140 }}
               value={lokasyonFiltresi || undefined}
-              options={[
-                { value: 'YATMARIN', label: 'Yatmarin' },
-                { value: 'NETSEL', label: 'Netsel' },
-                { value: 'DIS_SERVIS', label: 'Dış Servis' },
-              ]}
+              options={LOKASYON_SECENEKLERI}
               onChange={(value) => setLokasyonFiltresi(value ?? '')}
             />
             <Segmented

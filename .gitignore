@@ -12,6 +12,7 @@ node_modules
 
 # Production
 /build
+dist/
 
 # Misc
 .DS_Store
@@ -21,6 +22,9 @@ node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+servicepro-errors.txt
+sync_error.log
 
 # Local env files
 .env
@@ -29,6 +33,12 @@ yarn-error.log*
 
 # Vercel
 .vercel
+.vercel-global
+
+# Local scratch
+.tmp/
+.playwright-mcp/
+.claude/
 
 # TypeScript
 *.tsbuildinfo
@@ -37,6 +47,5 @@ next-env.d.ts
 # Prisma
 /prisma/migrations/*_*/          # Exclude all migrations except initial
 !/prisma/migrations/**/migration.sql # Keep migration.sql files
-*.json
 # Google Service Account credentials
 servicepro-*.json

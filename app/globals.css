@@ -977,6 +977,22 @@ body {
   }
 }
 
+/* ==================== SPINNER ==================== */
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* ==================== EMPTY STATES ==================== */
 .empty-state {
   display: flex;
@@ -1409,4 +1425,119 @@ body.ui-readable-typography .text-muted-foreground {
 body.ui-sidebar-pinned-operations .quick-actions-panel {
   position: sticky;
   top: 90px;
+}
+
+/* ==================== PERSONEL EDIT FORM STYLES ==================== */
+.personel-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 1024px) {
+  .personel-edit-grid {
+    grid-template-columns: 1.2fr 1.8fr;
+    gap: var(--space-xl);
+  }
+}
+
+.personel-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.personel-form-field {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.personel-form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.personel-form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--space-sm) 0;
+  cursor: pointer;
+}
+
+.personel-form-checkbox input:disabled + span {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.personel-badges-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-md);
+}
+
+@media (min-width: 640px) {
+  .personel-badges-grid {
+    gap: var(--space-lg);
+  }
+}
+
+.personel-badge-item {
+  text-align: center;
+  min-width: 80px;
+}
+
+.personel-badge-icon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-xs);
+}
+
+@media (min-width: 640px) {
+  .personel-badge-icon {
+    font-size: 2rem;
+  }
+}
+
+.personel-badge-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.personel-badge-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Edit mode highlight */
+.personel-editing {
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  transition: all 0.2s ease;
+}
+
+/* Form action buttons */
+.personel-form-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: flex-end;
+  margin-top: var(--space-lg);
+}
+
+@media (max-width: 640px) {
+  .personel-form-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .personel-form-actions button {
+    width: 100%;
+  }
 }

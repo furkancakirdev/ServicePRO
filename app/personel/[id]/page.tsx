@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { fetchPersonnelById } from '@/lib/api';
 import { Personnel, Service, UNVAN_CONFIG } from '@/types';
+import { useToast } from '@/hooks/useToast';
 
 type EditablePersonel = {
   ad: string;
@@ -90,10 +91,12 @@ export default function PersonelDetailPage() {
   const searchParams = useSearchParams();
   const id = params.id as string;
   const duzenleModu = searchParams.get('duzenle') === '1';
+  const { showSuccess, showError } = useToast();
 
   const [personel, setPersonel] = useState<Personnel | null>(null);
   const [assignedServices, setAssignedServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const adInputRef = useRef<HTMLInputElement | null>(null);
@@ -121,7 +124,7 @@ export default function PersonelDetailPage() {
           setAssignedServices(servicesData);
         }
       } catch (error) {
-        console.error('Failed to load personnel:', error);
+        setError(error instanceof Error ? error.message : 'Personel bilgileri yüklenirken bir hata oluştu');
       } finally {
         setLoading(false);
       }
@@ -139,10 +142,23 @@ export default function PersonelDetailPage() {
   const handleSave = async () => {
     if (!personel) return;
     const temizAd = (adInputRef.current?.value ?? formState.ad).trim();
+
+    // İsim validasyonu
     if (temizAd.length < 2) {
-      setFormError('Ad en az 2 karakter olmalidir');
+      setFormError('Ad en az 2 karakter olmalıdır');
       setFormSuccess(null);
       return;
+    }
+
+    // Giriş yili validasyonu
+    const currentYear = new Date().getFullYear();
+    if (formState.girisYili) {
+      const girisYili = Number(formState.girisYili);
+      if (isNaN(girisYili) || girisYili < 1950 || girisYili > currentYear + 1) {
+        setFormError(`Geçersiz giriş yılı. 1950-${currentYear + 1} arası giriniz.`);
+        setFormSuccess(null);
+        return;
+      }
     }
 
     setSaving(true);
@@ -172,7 +188,7 @@ export default function PersonelDetailPage() {
               .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
               .join(' | ')
           : null;
-        throw new Error(payload?.error || details || 'Personel guncellenemedi');
+        throw new Error(payload?.error || details || 'Personel güncellenemedi');
       }
 
       const updatedPersonel: Personnel = {
@@ -188,9 +204,14 @@ export default function PersonelDetailPage() {
       setPersonel(updatedPersonel);
       setFormState(toEditState(updatedPersonel));
       setEditing(false);
-      setFormSuccess('Personel bilgileri guncellendi.');
+      setFormSuccess('Personel bilgileri güncellendi.');
+
+      // Toast bildirimi
+      showSuccess('Personel bilgileri güncellendi');
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Personel guncellenemedi');
+      const errorMsg = error instanceof Error ? error.message : 'Personel güncellenemedi';
+      setFormError(errorMsg);
+      showError('Güncelleme başarısız', { description: errorMsg });
     } finally {
       setSaving(false);
     }
@@ -199,7 +220,34 @@ export default function PersonelDetailPage() {
   if (loading) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <p>Yükleniyor...</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-md)' }}>
+          <div className="spinner" style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid var(--color-border)',
+            borderTopColor: 'var(--color-primary)',
+            borderRadius: '50%',
+          }}></div>
+          <p style={{ color: 'var(--color-text-muted)' }}>Personel bilgileri yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
+        <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>⚠️</div>
+        <h2 style={{ color: 'var(--color-error)' }}>Hata Oluştu</h2>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-lg)' }}>{error}</p>
+        <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
+          <button onClick={() => window.location.reload()} className="btn btn-primary">
+            Tekrar Dene
+          </button>
+          <Link href="/personel" className="btn btn-secondary">
+            ← Personel listesine dön
+          </Link>
+        </div>
       </div>
     );
   }
@@ -207,10 +255,11 @@ export default function PersonelDetailPage() {
   if (!personel) {
     return (
       <div className="surface-panel" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
-        <h2>Personel bulunamadi</h2>
-        <p style={{ color: 'var(--color-text-muted)' }}>ID: {id}</p>
-        <Link href="/personel" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
-          â† Personel listesine don
+        <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>🔍</div>
+        <h2>Personel Bulunamadı</h2>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-lg)' }}>ID: {id}</p>
+        <Link href="/personel" className="btn btn-primary">
+          ← Personel listesine dön
         </Link>
       </div>
     );
@@ -260,15 +309,7 @@ export default function PersonelDetailPage() {
 
           <div style={{ marginTop: 'var(--space-sm)', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
             {editing ? (
-              <>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleSave}
-                  disabled={saving}
-                  data-testid="personel-kaydet-button"
-                >
-                  {saving ? 'Kaydediliyor...' : 'Kaydet'}
-                </button>
+              <div className="personel-form-actions">
                 <button
                   className="btn btn-secondary"
                   onClick={() => {
@@ -278,16 +319,36 @@ export default function PersonelDetailPage() {
                   }}
                   disabled={saving}
                 >
-                  Vazgec
+                  Vazgeç
                 </button>
-              </>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSave}
+                  disabled={saving}
+                  data-testid="personel-kaydet-button"
+                >
+                  {saving ? (
+                    <>
+                      <span className="spinner" style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        borderTopColor: 'white',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                      }}></span>
+                      <span style={{ marginLeft: '8px' }}>Kaydediliyor...</span>
+                    </>
+                  ) : 'Kaydet'}
+                </button>
+              </div>
             ) : (
               <button
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 onClick={() => setEditing(true)}
                 data-testid="personel-duzenle-button"
               >
-                Bilgileri Duzenle
+                ✏️ Bilgileri Düzenle
               </button>
             )}
           </div>
@@ -313,16 +374,16 @@ export default function PersonelDetailPage() {
         </div>
       ) : null}
 
-      <div className="grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', gap: 'var(--space-xl)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-          <div className="surface-panel">
+      <div className="personel-edit-grid">
+        <div className="personel-form-section">
+          <div className={`surface-panel ${editing ? 'personel-editing' : ''}`}>
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
               Personel Bilgileri
             </h3>
 
-            <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+            <div className="personel-form-field">
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Ad</label>
+                <label className="personel-form-label">Ad</label>
                 <input
                   ref={adInputRef}
                   className="form-input"
@@ -334,7 +395,7 @@ export default function PersonelDetailPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Rol</label>
+                <label className="personel-form-label">Rol</label>
                 <select
                   className="form-select"
                   value={formState.rol}
@@ -352,7 +413,7 @@ export default function PersonelDetailPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Unvan</label>
+                <label className="personel-form-label">Unvan</label>
                 <select
                   className="form-select"
                   value={formState.unvan}
@@ -365,14 +426,14 @@ export default function PersonelDetailPage() {
                   }
                 >
                   <option value="usta">Usta</option>
-                  <option value="cirak">Cirak</option>
-                  <option value="yonetici">Yonetici</option>
+                  <option value="cirak">Çırak</option>
+                  <option value="yonetici">Yönetici</option>
                   <option value="ofis">Ofis</option>
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Giris Yili</label>
+                <label className="personel-form-label">Giriş Yılı</label>
                 <input
                   type="number"
                   min={1950}
@@ -381,17 +442,18 @@ export default function PersonelDetailPage() {
                   value={formState.girisYili}
                   disabled={!editing}
                   onChange={(e) => setFormState((prev) => ({ ...prev, girisYili: e.target.value }))}
+                  placeholder="2024"
                 />
               </div>
 
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <label className="personel-form-checkbox">
                 <input
                   type="checkbox"
                   checked={formState.aktif}
                   disabled={!editing}
                   onChange={(e) => setFormState((prev) => ({ ...prev, aktif: e.target.checked }))}
                 />
-                Aktif Personel
+                <span>Aktif Personel</span>
               </label>
             </div>
           </div>
@@ -410,7 +472,7 @@ export default function PersonelDetailPage() {
               }}
             >
               <div style={{ fontSize: '3rem', fontWeight: 700 }}>{avgPuan || '-'}</div>
-              <div style={{ opacity: 0.8 }}>Aylik Ortalama Puan</div>
+              <div style={{ opacity: 0.8 }}>Aylık Ortalama Puan</div>
               <div style={{ marginTop: 'var(--space-sm)', fontSize: '0.85rem', opacity: 0.85 }}>
                 Açık İş Emri: {assignedServices.length}
               </div>
@@ -423,18 +485,18 @@ export default function PersonelDetailPage() {
             <h3 className="card-title" style={{ marginBottom: 'var(--space-lg)' }}>
               Rozetler
             </h3>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>ALTIN</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.altinRozet || 0}</div>
+            <div className="personel-badges-grid">
+              <div className="personel-badge-item">
+                <div className="personel-badge-label">ALTIN</div>
+                <div className="personel-badge-icon">{personel.altinRozet || 0}</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>GUMUS</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.gumusRozet || 0}</div>
+              <div className="personel-badge-item">
+                <div className="personel-badge-label">GÜMÜŞ</div>
+                <div className="personel-badge-icon">{personel.gumusRozet || 0}</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem' }}>BRONZ</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{personel.bronzRozet || 0}</div>
+              <div className="personel-badge-item">
+                <div className="personel-badge-label">BRONZ</div>
+                <div className="personel-badge-icon">{personel.bronzRozet || 0}</div>
               </div>
             </div>
           </div>

@@ -1,6 +1,0 @@
-[   19898ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/weather'lat=36.8547&lon=28.2742&name=Marmaris:0
-[   19899ms] [ERROR] Error: Hava durumu alinamadi
-    at fetchWeather (webpack-internal:///(app-pages-browser)/./components/dashboard/weather-widget.tsx:154:27) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
-[   19904ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/weather/locations'q=Marmaris:0
-[   19904ms] [ERROR] Error: Konum aramasi basarisiz
-    at eval (webpack-internal:///(app-pages-browser)/./components/dashboard/weather-widget.tsx:117:27) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32

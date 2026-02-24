@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IsTuru, IS_TURU_CONFIG, RAPOR_GEREKSINIMLERI, KapanisRaporu } from '@/types';
 import { hesaplaRaporBasarisi, hesaplaBireyselPuan } from '@/lib/scoring-calculator';
+import { useToast } from '@/hooks/useToast';
 
 type RaporAlanKey = keyof Omit<KapanisRaporu, 'aciklama' | 'raporlayanPersonel' | 'raporTarihi'>;
 
@@ -44,6 +45,7 @@ const puanDisiAlanlar: { key: 'saatiOlmayanUnitePuanDisi' | 'adamSaatUygulanmazP
 
 export default function KapanisRaporPage() {
     const router = useRouter();
+    const { showSuccess, showError } = useToast();
 
     const gerekliAlanlar = RAPOR_GEREKSINIMLERI[mockService.isTuru];
 
@@ -67,10 +69,36 @@ export default function KapanisRaporPage() {
     const destekPuan = hesaplaBireyselPuan(1, mockService.isTuru, 'destek', false);
 
     const handleSubmit = async () => {
-        // TODO: API call
-        console.log('Rapor:', rapor);
-        console.log('Başarı:', raporBasarisi, 'Sorumlu Puan:', sorumlPuan.finalPuan);
-        router.push('/is-emirleri');
+        try {
+            // Rapor verilerini API'ye gönder
+            const response = await fetch('/api/servisler/kapanis-raporu', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
+                },
+                body: JSON.stringify({
+                    servisId: mockService.id,
+                    rapor,
+                    raporBasarisi,
+                    personelPuanlari: [
+                        { personelId: mockService.atananPersonel[0]?.personnelId, puan: sorumlPuan.finalPuan },
+                        { personelId: mockService.atananPersonel[1]?.personnelId, puan: destekPuan.finalPuan },
+                    ],
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Rapor kaydedilemedi');
+            }
+
+            showSuccess('Rapor başarıyla kaydedildi');
+            router.push('/is-emirleri');
+        } catch (error) {
+            showError('Rapor kaydedilemedi', {
+                description: error instanceof Error ? error.message : 'Lütfen tekrar deneyin',
+            });
+        }
     };
 
     return (
